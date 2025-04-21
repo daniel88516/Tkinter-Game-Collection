@@ -50,7 +50,7 @@ class MineSweeper:
         self.tile_images["TileMine"]     = tk.PhotoImage(file=os.path.join(base_path, "TileMine.png"))
 
     def create_variable(self):
-        self.game_over  = False
+        self.is_game_over  = False
         self.debug_mode = False
         self.first_click = True
         
@@ -69,6 +69,7 @@ class MineSweeper:
                     command=lambda r=r, c=c: self.on_left_click(r, c)  # 左鍵點擊
                 )
                 btn.bind("<Button-3>", lambda event, r=r, c=c: self.on_right_click(r, c))  # 右鍵點擊
+                btn.bind("<Button-2>", lambda event, r=r, c=c: self.on_chord_click(r, c)) # 中鍵雙擊
                 btn.grid(row=r, column=c, padx=0, pady=0)
                 row_buttons.append(btn)
             self.buttons.append(row_buttons)
@@ -92,7 +93,7 @@ class MineSweeper:
         self.update_board()
         
     def new_game(self):
-        self.game_over = False
+        self.is_game_over = False
         self.first_click = True
         self.cells = [[Cell(r, c) for c in range(self.board_width)] for r in range(self.board_height)]
         # self.place_mines()
@@ -100,6 +101,7 @@ class MineSweeper:
         self.update_board()
 
     def place_mines(self, first_r, first_c):
+        # 安全開局
         safe_cells = set()
         for dr in [-1, 0, 1]:
             for dc in [-1, 0, 1]:
@@ -134,10 +136,7 @@ class MineSweeper:
                     cell.number = mine_count
 
     def on_left_click(self, r, c):
-        if self.game_over:
-            return
-        cell = self.cells[r][c]
-        if cell.revealed and cell.flagged:
+        if self.is_game_over:
             return
         
         # 第一次按下的時候, 才擺放地雷
@@ -145,28 +144,91 @@ class MineSweeper:
             self.first_click = False
             self.place_mines(r, c)
             self.calculate_numbers()
-        
+            self.first_click = False
+
+        # 旗標不會被展開
+        cell = self.cells[r][c]
+        if cell.revealed and cell.flagged:
+            return
+
+        # 每次按下, 判斷是否為地雷
         if cell.type == "mine":
             cell.exploded = True
             cell.revealed = True
-            self.game_over = True
-            self.reveal_all_mines()
-            messagebox.showinfo("遊戲結束", "你踩到地雷了！")
+            self.is_game_over = True
+            self.game_over()
         elif cell.type == "number":
-            cell.revealed = True
+            if cell.revealed:
+                self.on_chord_click(r, c)
+            else: 
+                cell.revealed = True
         elif cell.type == "empty":
             self.flood_fill(r, c)
         self.update_board()
         self.check_win_condition()
 
     def on_right_click(self, r, c):
-        if self.game_over:
+        if self.is_game_over:
             return
         cell = self.cells[r][c]
         if cell.revealed:
             return
         cell.flagged = not cell.flagged
         self.update_board()
+
+    def on_chord_click(self, r, c):
+        print(f"chord click: row{r}, col{c}")
+        if self.is_game_over:
+            return
+        
+        # 只能在 revealed, 數字觸發
+        cell = self.cells[r][c]
+        if not cell.revealed or cell.type != "number":
+            return
+        
+        flag_count = self.count_flags_around(r, c)
+        if flag_count != cell.number:
+            print(f"flag_count{flag_count} not equal to cellnumber: {cell.number}")
+            return
+        
+        exploded = False
+        for dr in [-1, 0, 1]:
+            for dc in [-1, 0, 1]:
+                if dr == 0 and dc == 0:
+                    continue
+                nr = r + dr
+                nc = c + dc
+                if 0 <= nr < self.board_height and 0 <= nc < self.board_width:
+                    neighbor = self.cells[nr][nc]
+                    if not neighbor.flagged and not neighbor.revealed:
+                        if neighbor.type=="mine":
+                            neighbor.exploded = True
+                            neighbor.revealed = True
+                            exploded = True
+                        elif neighbor.type == "number":
+                            neighbor.revealed = True
+                        else: # empty
+                            self.flood_fill(nr, nc)
+        if exploded:
+            self.is_game_over = True
+            self.game_over()
+            
+        self.update_board()
+        if not exploded:
+            self.check_win_condition()
+
+    def count_flags_around(self, r, c):
+        flag_count = 0
+        for dr in [-1, 0, 1]:
+            for dc in [-1, 0, 1]:
+                if dr == 0 and dc == 0:
+                    continue
+                nr = r + dr
+                nc = c + dc
+                if 0 <= nr < self.board_height and 0 <= nc < self.board_width:
+                    if self.cells[nr][nc].flagged:
+                        flag_count += 1
+        return flag_count
 
     def flood_fill(self, r, c):
         if not (0 <= r < self.board_height and 0 <= c < self.board_width):
@@ -187,12 +249,17 @@ class MineSweeper:
                         if not neighbor.revealed and neighbor.type != "mine":
                             self.flood_fill(nr, nc)
 
+    def game_over(self):
+        self.reveal_all_mines()
+        messagebox.showinfo("遊戲結束", "你踩到地雷了！")
+        
     def reveal_all_mines(self):
         for r in range(self.board_height):
             for c in range(self.board_width):
                 cell = self.cells[r][c]
                 if cell.type == "mine":
                     cell.revealed = True
+        self.update_board()
 
     def check_win_condition(self):
         for r in range(self.board_height):
@@ -200,7 +267,7 @@ class MineSweeper:
                 cell = self.cells[r][c]
                 if cell.type != "mine" and not cell.revealed:
                     return
-        self.game_over = True
+        self.is_game_over = True
         messagebox.showinfo("恭喜", "你贏了！")
 
     def update_board(self):
@@ -231,7 +298,7 @@ class MineSweeper:
 
 # main
 if __name__ == "__main__":
-    root = tk.Tk()
-    root.title("踩地雷")
-    game = MineSweeper(root)
+    window = tk.Tk()
+    window.title("踩地雷")
+    game = MineSweeper(window)
     game.start()
