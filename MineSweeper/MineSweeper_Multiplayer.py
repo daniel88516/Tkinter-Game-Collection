@@ -5,17 +5,19 @@ from MineSweeper_Difficulty import DifficultyConfig, Difficulty
 from MineSweeper_GameBoard import GameBoard
 
 class BoardManager:
-    """管理一個遊戲版塊"""
+    """管理一個遊戲版塊, 初始化會用到的一些變數"""
     def __init__(self, parent_frame, tile_images, name, width, height, mine_count, debug_mode_var, on_win_callback):
         self.parent_frame = parent_frame
         self.tile_images = tile_images
         self.name = name
         self.gameBoard = GameBoard(width, height, mine_count, name)
         self.buttons = []
+        
         self.flagged_count = IntVar(value=0)
         self.is_game_over = False
         self.first_click = True
         self.chord_holding = False
+        
         self.debug_mode_var = debug_mode_var  # 這是共有的 debug 變數
         self.on_win_callback = on_win_callback  # 勝利時的回調函數
         
@@ -59,7 +61,7 @@ class BoardManager:
         self.update_board()
     
     def flood_fill(self, r, c):
-        """填充空白區域"""
+        """塌陷"""
         if not self.gameBoard.is_valid_position(r, c):
             return 
         cell = self.gameBoard.get_cell(r, c)
@@ -79,7 +81,7 @@ class BoardManager:
                             self.flood_fill(nr, nc)
     
     def on_left_click(self, r, c):
-        """左鍵點擊處理"""
+        """你按下了左鍵"""
         if self.is_game_over:
             return
         
@@ -108,7 +110,7 @@ class BoardManager:
         self.check_win_condition()
     
     def on_right_click(self, r, c):
-        """右鍵點擊處理"""
+        """你按下了右鍵插旗子"""
         if self.is_game_over:
             return
         
@@ -123,7 +125,7 @@ class BoardManager:
         self.update_board()
     
     def on_chord_click(self, r, c):
-        """和弦點擊處理"""
+        """你想要抄近路，玩的快一些"""
         if self.is_game_over:
             return
         
@@ -161,7 +163,7 @@ class BoardManager:
         self.check_win_condition()
     
     def on_chord_press(self, r, c):
-        """和弦按下處理"""
+        """想要展開時的「預視」效果"""
         if self.is_game_over:
             return
         
@@ -188,7 +190,7 @@ class BoardManager:
                         btn.config(image=self.tile_images["TileEmpty"])
     
     def on_chord_release(self, r, c):
-        """和弦釋放處理"""
+        """放開按鍵, 觸發 chord_click 的效果"""
         if not self.chord_holding:
             return
         self.chord_holding = False
@@ -196,12 +198,12 @@ class BoardManager:
         self.on_chord_click(r, c)
     
     def game_over(self):
-        """遊戲結束處理"""
+        """你爆炸了"""
         self.reveal_all_mines()
         messagebox.showinfo("遊戲結束", f"{self.name} 踩到地雷了！")
     
     def check_win_condition(self):
-        """檢查勝利條件"""
+        """勝利唾手可得"""
         for r in range(self.gameBoard.height):
             for c in range(self.gameBoard.width):
                 cell = self.gameBoard.get_cell(r, c)
