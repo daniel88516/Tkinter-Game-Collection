@@ -59,6 +59,7 @@ class GameMenu:
 
         self.tree.bind("<Button-3>", self.show_context_menu)
         self.tree.bind("<Double-1>", lambda e: self.run_selected_game())
+        self.tree.bind("<Return>", lambda e: self.run_selected_game())
 
         # 退出按鈕
         exit_btn = Button(self.window, text="退出", font=("Arial", 10), bg="red", fg="white",
@@ -81,7 +82,7 @@ class GameMenu:
             if py_file:
                 full_path = os.path.join(os.path.dirname(__file__), py_file)
                 subprocess.Popen(["python", full_path], shell=True)
-
+                
     def show_game_tutorial(self):
         selected_item = self.tree.selection()
         if not selected_item:
