@@ -18,8 +18,9 @@ class MineSweeper:
         self.buttons: list[list[Button]] = []
                     
         self.window:Tk = window
-        self.load_images()
+        
         self.create_variable()
+        self.load_images()
         self.create_widget()
         self.center_window()
         self.new_game()
@@ -30,7 +31,7 @@ class MineSweeper:
         
     def load_images(self):
         """把圖片加載進來, 之後可透過環境變數簡化"""
-        base_path = os.path.join(os.path.dirname(__file__), "Images")
+        base_path = os.path.join(os.path.dirname(__file__), f"Images")
         self.tile_images = {}
         for i in range(1, 9):
             self.tile_images[f"Tile{i}"] = PhotoImage(file=os.path.join(base_path, f"Tile{i}.png"))
@@ -42,9 +43,11 @@ class MineSweeper:
 
     def create_variable(self):
         """會用到的一些遊戲變數"""
-        self.is_game_over  = False
-        self.first_click = True
-        self.debug_mode = False
+        self.flagged_count:IntVar = IntVar(value=0)
+        self.is_game_over:bool = False
+        self.first_click:bool = True
+        self.chord_holding:bool = False
+        self.debug_mode:bool = False
         
     def create_widget(self):
         """創建你會看到的所有元素"""
@@ -64,7 +67,8 @@ class MineSweeper:
                     command=lambda r=r, c=c: self.on_left_click(r, c)  # 左鍵點擊
                 )
                 btn.bind("<Button-3>", lambda event, r=r, c=c: self.on_right_click(r, c))  # 右鍵點擊
-                btn.bind("<Button-2>", lambda event, r=r, c=c: self.on_chord_click(r, c)) # 中鍵點擊
+                btn.bind("<Button-1>", lambda event, r=r, c=c: self.on_chord_press(r, c)) # 左鍵點擊
+                btn.bind("<ButtonRelease-1>", lambda event, r=r, c=c: self.on_chord_release(r, c)) # 左鍵放開
                 btn.grid(row=r, column=c, padx=0, pady=0)
                 row_buttons.append(btn)
             self.buttons.append(row_buttons)
@@ -181,10 +185,7 @@ class MineSweeper:
             self.is_game_over = True
             self.game_over()
         elif cell.is_number():
-            if cell.revealed:
-                self.on_chord_click(r, c)
-            else: 
-                cell.revealed = True
+            cell.revealed = True
         elif cell.is_empty():
             self.flood_fill(r, c)
         self.update_board()
@@ -192,17 +193,24 @@ class MineSweeper:
 
     def on_right_click(self, r, c):
         """你按下了右鍵插旗子"""
+        # 遊戲已經結束, 你來太晚了
         if self.is_game_over:
             return
+        
+        # 你不能將旗子插在奇怪的位置
         cell = self.gameBoard.get_cell(r, c)
         if cell.revealed:
             return
+        
+        # 你插太多旗子了
+        if self.flagged_count.get() >= self.gameBoard.mine_count: 
+            return
+        
         cell.flagged = not cell.flagged
         self.update_board()
 
     def on_chord_click(self, r, c):
         """你想要抄近路，玩的快一些"""
-        print(f"Chord_click: {r}, {c}")
         if self.is_game_over:
             return
         
@@ -213,7 +221,6 @@ class MineSweeper:
         
         flag_count = self.gameBoard.count_flags_around(r, c)
         if flag_count != cell.number:
-            print(f"數字不一致, 圖片上寫著{cell.number}, 周圍只有{flag_count}個旗子")
             return
         
         exploded = False
@@ -240,6 +247,41 @@ class MineSweeper:
             
         self.update_board()
     
+    def on_chord_press(self, r, c):
+        """想要展開時的「預視」效果"""
+        if self.is_game_over:
+            return
+        
+        cell = self.gameBoard.get_cell(r, c)
+        if not cell.revealed or not cell.is_number():
+            return
+            
+        flag_count = self.gameBoard.count_flags_around(r, c)
+        if flag_count != cell.number:
+            return
+            
+        self.chord_holding = True
+        # 臨時顯示周圍未標記格子的內容
+        for dr in [-1, 0, 1]:
+            for dc in [-1, 0, 1]:
+                if dr == 0 and dc == 0:
+                    continue
+                nr = r + dr
+                nc = c + dc
+                if self.gameBoard.is_valid_position(nr, nc):
+                    neighbor = self.gameBoard.get_cell(nr, nc)
+                    if not neighbor.flagged and not neighbor.revealed:
+                        btn = self.buttons[nr][nc]
+                        btn.config(image=self.tile_images["TileEmpty"])
+
+    def on_chord_release(self, r, c):
+        """放開按鍵, 觸發 chord_click 的效果"""
+        if not self.chord_holding:
+            return
+        self.chord_holding = False
+        self.update_board()
+        self.on_chord_click(r, c)
+        
     """輔助方法"""
     def reveal_all_mines(self):
         for r in range(self.gameBoard.height):
