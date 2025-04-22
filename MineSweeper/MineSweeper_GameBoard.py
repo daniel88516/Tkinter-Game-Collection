@@ -2,17 +2,23 @@ import random
 from MineSweeper_Cell import Cell
 class GameBoard:
     """遊戲初始化"""
-    def __init__(self, board_width: int, board_height: int, mine_count: int):
-        self.width = board_width
-        self.height = board_height
-        self.mine_count = mine_count
-        self.cells: list[list[Cell]] = []
+    def __init__(self, board_width: int, board_height: int, mine_count: int, name:str="我沒有名字...嗚嗚嗚"):
+        self.width:int = board_width
+        self.height:int = board_height
+        self.mine_count:int = mine_count
+        self.name:str = name
+        self.create_variable()
         self.reset()
     
+    def create_variable(self):
+        self.cells: list[list[Cell]] = []
+        self.first_click = True
+        
     def reset(self):
         """重置, 沒什麼好說的"""
         self.cells = [[Cell(r, c) for c in range(self.width)] 
                      for r in range(self.height)]
+        self.first_click = True
     
     def place_mines(self, first_r: int, first_c: int):
         """放地雷, 確保第一次按下, 該位置八方位領域展開的區域不會爆炸"""
@@ -23,7 +29,7 @@ class GameBoard:
                 nc = first_c + dc
                 if 0 <= nr < self.height and 0 <= nc < self.width:
                     safe_cells.add((nr, nc))
-                    
+        
         count = 0
         while count < self.mine_count:
             r = random.randrange(self.height)
@@ -31,6 +37,7 @@ class GameBoard:
             if (r, c) not in safe_cells and not self.cells[r][c].is_mine():
                 self.cells[r][c].set_mine()
                 count += 1
+        self.first_click = False
     
     def calculate_numbers(self):
         """計算每個格子周圍的地雷數"""
