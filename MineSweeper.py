@@ -2,95 +2,34 @@ from tkinter import *
 from tkinter import messagebox
 import random
 import os
-from enum import auto, Enum
-
-class Difficulty(Enum):
-    EASY = auto()
-    NORMAL = auto() 
-    HARD = auto() 
-    
-class DifficultyConfig(): 
-    CONFIGS = {
-        Difficulty.EASY:{
-            "board_width": 9,
-            "board_height": 9,
-            "mine_count": 10,
-            "name": "簡單"
-        },
-        Difficulty.NORMAL:{
-            "board_width": 16,
-            "board_height": 16,
-            "mine_count": 40,
-            "name": "普通"
-        },
-        Difficulty.HARD:{
-            "board_width": 30,
-            "board_height": 16,
-            "mine_count": 99,
-            "name": "困難"
-        }
-    }
-    def __init__(self, difficulty: Difficulty):
-        config = self.CONFIGS[difficulty]
-        self.board_width:int = config["board_width"]
-        self.board_height:int = config["board_height"]
-        self.mine_count:int = config["mine_count"]
-        self.name:str = config["name"]
-        
-class CellType(Enum):
-    EMPTY = auto()
-    MINE = auto()
-    NUMBER = auto()
-    
-class Cell:
-    def __init__(self, row, col):
-        self.row:int        = row 
-        self.col:int        = col     
-        self.type:CellType  = CellType.EMPTY
-        self.number:int     = 0
-        self.revealed:bool  = False
-        self.flagged:bool   = False
-        self.exploded:bool  = False
-    
-    def reset(self):
-        self.type = CellType.EMPTY
-    
-    def is_mine(self):
-        return self.type == CellType.MINE
-
-    def is_number(self):
-        return self.type == CellType.NUMBER
-    
-    def is_empty(self):
-        return self.type == CellType.EMPTY
-    
-    def set_mine(self):
-        self.type = CellType.MINE
-    
-    def set_number(self, number:int):
-        self.type = CellType.NUMBER
-        self.number = number
-
+from MineSweeper_Cell import CellType, Cell
+from MineSweeper_Difficulty import DifficultyConfig, Difficulty
+from MineSweeper_GameBoard import GameBoard
 class MineSweeper:
-    # ===初始化===
+    """初始化"""
     def __init__(self, window:Tk, difficulty: Difficulty=Difficulty.NORMAL):
-        self.window:Tk              = window
+        # 根據難度初始化遊戲場地
         self.config = DifficultyConfig(difficulty)
-        self.board_width:int        = self.config.board_width
-        self.board_height:int       = self.config.board_height
-        self.mine_count:int         = self.config.mine_count
-        self.cells:list[Cell]       = []
-        self.buttons:list[Button]   = []    
-            
+        self.gameBoard:GameBoard = GameBoard(
+            self.config.board_width,
+            self.config.board_height,
+            self.config.mine_count
+        )
+        self.buttons: list[list[Button]] = []
+                    
+        self.window:Tk = window
         self.load_images()
         self.create_variable()
         self.create_widget()
+        self.center_window()
         self.new_game()
     
     def start(self):
+        """用 start 封裝 mainloop, 問就是這樣比較直觀"""
         self.window.mainloop()
         
     def load_images(self):
+        """把圖片加載進來, 之後可透過環境變數簡化"""
         base_path = os.path.join(os.path.dirname(__file__), "Images")
         self.tile_images = {}
         for i in range(1, 9):
@@ -102,20 +41,22 @@ class MineSweeper:
         self.tile_images["TileMine"]     = PhotoImage(file=os.path.join(base_path, "TileMine.png"))
 
     def create_variable(self):
+        """會用到的一些遊戲變數"""
         self.is_game_over  = False
-        self.debug_mode = False
         self.first_click = True
+        self.debug_mode = False
         
     def create_widget(self):
+        """創建你會看到的所有元素"""
         self.frame = Frame(self.window)
         self.frame.pack()
-        self.board = Frame(self.frame)
-        self.board.pack()
-        for r in range(self.board_height):
+        self.board_frame = Frame(self.frame)
+        self.board_frame.pack()
+        for r in range(self.gameBoard.height):
             row_buttons = []
-            for c in range(self.board_width):
+            for c in range(self.gameBoard.width):
                 btn = Button(
-                    self.board,
+                    self.board_frame,
                     image=self.tile_images["TileUnknown"],
                     relief="flat",
                     borderwidth=0,
@@ -127,34 +68,15 @@ class MineSweeper:
                 btn.grid(row=r, column=c, padx=0, pady=0)
                 row_buttons.append(btn)
             self.buttons.append(row_buttons)
+        # 控制面板
         self.create_control_panel()
-        self.center_window()
    
-    def center_window(self):
-        """讓視窗自適應大小並置中"""
-        self.window.update_idletasks()
-        
-        # 計算所需的視窗大小
-        # 假設每個格子是 32x32 像素，再加上邊距和控制面板的空間
-        width = self.board_width * 32 + 40  # 左右各加 20 像素邊距
-        height = self.board_height * 32 + 100  # 上下邊距加控制面板高度
-        
-        # 獲取螢幕尺寸
-        screen_width = self.window.winfo_screenwidth()
-        screen_height = self.window.winfo_screenheight()
-        
-        # 計算視窗位置使其置中
-        x = (screen_width - width) // 2
-        y = (screen_height - height) // 2
-        
-        # 設定視窗大小和位置
-        self.window.geometry(f"{width}x{height}+{x}+{y}")
-        
     def create_control_panel(self):
-        # 建立控制面板
+        """建立控制面板"""
         control_frame = Frame(self.frame)
         control_frame.pack(pady=5)
         
+        # 難度按鈕
         difficulty_frame = Frame(control_frame)
         difficulty_frame.pack(side=TOP, pady=5)
         
@@ -171,50 +93,31 @@ class MineSweeper:
         self.debug_button = Button(control_frame, text="Debug 模式：關閉", command=self.toggle_debug_mode)
         self.debug_button.pack(side=LEFT, padx=5)
 
+    def center_window(self):
+        """讓視窗自適應大小, 然後置中"""
+        self.window.update_idletasks()
+
+        # 每個方塊的大小是 32 
+        width = self.gameBoard.width * 32 + 40  # 左右各加 20 像素邊距
+        height = self.gameBoard.height * 32 + 100  # 加入控制面板高度
+        
+        screen_width = self.window.winfo_screenwidth()
+        screen_height = self.window.winfo_screenheight()
+        x = (screen_width - width) // 2
+        y = (screen_height - height) // 2
+        self.window.geometry(f"{width}x{height}+{x}+{y}")
+        
     def toggle_debug_mode(self):
+        """作弊是一定要有的, 開發者很累的"""
         self.debug_mode = not self.debug_mode
         self.debug_button.config(text=f"Debug 模式：{'開啟' if self.debug_mode else '關閉'}")
         self.update_board()
         
-    # ===遊戲邏輯===
-    def place_mines(self, first_r, first_c):
-        # 安全開局
-        safe_cells = set()
-        for dr in [-1, 0, 1]:
-            for dc in [-1, 0, 1]:
-                nr = first_r + dr
-                nc = first_c + dc
-                if 0 <= nr < self.board_height and 0 <= nc < self.board_width:
-                    safe_cells.add((nr, nc))
-        count = 0
-        while count < self.mine_count:
-            r = random.randrange(self.board_height)
-            c = random.randrange(self.board_width)
-            cell = self.cells[r][c]
-            if (r, c) not in safe_cells and not cell.is_mine():
-                self.cells[r][c].set_mine()
-                count += 1
-
-    def calculate_numbers(self):
-        for r in range(self.board_height):
-            for c in range(self.board_width):
-                cell = self.cells[r][c]
-                if cell.is_mine():
-                    continue
-                mine_count = sum(1
-                    for dr in [-1, 0, 1]
-                    for dc in [-1, 0, 1]
-                    if 0 <= r + dr < self.board_height
-                    and 0 <= c + dc < self.board_width
-                    and self.cells[r + dr][c + dc].is_mine()
-                )
-                if mine_count > 0:
-                    cell.set_number(mine_count)
-
+    """遊戲邏輯"""
     def flood_fill(self, r, c):
-        if not (0 <= r < self.board_height and 0 <= c < self.board_width):
-            return
-        cell = self.cells[r][c]
+        if not self.gameBoard.is_valid_position(r, c):
+            return 
+        cell = self.gameBoard.get_cell(r, c)
         if cell.revealed or cell.flagged:
             return
         cell.revealed = True
@@ -225,45 +128,49 @@ class MineSweeper:
                         continue
                     nr = r + dr
                     nc = c + dc
-                    if 0 <= nr < self.board_height and 0 <= nc < self.board_width:
-                        neighbor = self.cells[nr][nc]
+                    if self.gameBoard.is_valid_position(nr, nc):
+                        neighbor = self.gameBoard.get_cell(nr, nc)
                         if not neighbor.revealed and not neighbor.is_mine():
                             self.flood_fill(nr, nc)
 
-    # ===遊戲狀態相關===
+    """遊戲狀態相關"""
     def new_game(self):
+        """開始一場新遊戲"""
         self.is_game_over = False
         self.first_click = True
-        self.cells = [[Cell(r, c) for c in range(self.board_width)] for r in range(self.board_height)]
+        self.gameBoard.reset()
         self.update_board()
-
+        
     def game_over(self):
+        """你爆炸了"""
         self.reveal_all_mines()
         messagebox.showinfo("遊戲結束", "你踩到地雷了！")
         
     def check_win_condition(self):
-        for r in range(self.board_height):
-            for c in range(self.board_width):
-                cell = self.cells[r][c]
+        """勝利唾手可得"""
+        for r in range(self.gameBoard.height):
+            for c in range(self.gameBoard.width):
+                cell = self.gameBoard.get_cell(r, c)
                 if not cell.is_mine() and not cell.revealed:
                     return
         self.is_game_over = True
         messagebox.showinfo("恭喜", "你贏了！")
     
-    # ===滑鼠事件處理===
+    """滑鼠事件處理"""
     def on_left_click(self, r, c):
+        """你按下了左鍵"""
         if self.is_game_over:
             return
         
         # 第一次按下的時候, 才擺放地雷
         if self.first_click:
             self.first_click = False
-            self.place_mines(r, c)
-            self.calculate_numbers()
+            self.gameBoard.place_mines(r, c)
+            self.gameBoard.calculate_numbers()
             self.first_click = False
 
         # 旗標不會被展開
-        cell = self.cells[r][c]
+        cell = self.gameBoard.get_cell(r, c)
         if cell.revealed and cell.flagged:
             return
 
@@ -284,24 +191,26 @@ class MineSweeper:
         self.check_win_condition()
 
     def on_right_click(self, r, c):
+        """你按下了右鍵插旗子"""
         if self.is_game_over:
             return
-        cell = self.cells[r][c]
+        cell = self.gameBoard.get_cell(r, c)
         if cell.revealed:
             return
         cell.flagged = not cell.flagged
         self.update_board()
 
     def on_chord_click(self, r, c):
+        """你想要抄近路，玩的快一些"""
         if self.is_game_over:
             return
         
         # 只能在 revealed, 數字觸發
-        cell = self.cells[r][c]
+        cell = self.gameBoard.get_cell(r, c)
         if not cell.revealed or not cell.is_number():
             return
         
-        flag_count = self.count_flags_around(r, c)
+        flag_count = self.gameBoard.count_flags_around(r, c)
         if flag_count != cell.number:
             return
         
@@ -312,8 +221,8 @@ class MineSweeper:
                     continue
                 nr = r + dr
                 nc = c + dc
-                if 0 <= nr < self.board_height and 0 <= nc < self.board_width:
-                    neighbor = self.cells[nr][nc]
+                if self.gameBoard.is_valid_position(nr, nc):
+                    neighbor = self.gameBoard.get_cell(nr, nc)
                     if not neighbor.flagged and not neighbor.revealed:
                         if neighbor.is_mine():
                             neighbor.exploded = True
@@ -329,32 +238,19 @@ class MineSweeper:
             
         self.update_board()
     
-    # ===輔助方法===
-    def count_flags_around(self, r, c):
-        flag_count = 0
-        for dr in [-1, 0, 1]:
-            for dc in [-1, 0, 1]:
-                if dr == 0 and dc == 0:
-                    continue
-                nr = r + dr
-                nc = c + dc
-                if 0 <= nr < self.board_height and 0 <= nc < self.board_width:
-                    if self.cells[nr][nc].flagged:
-                        flag_count += 1
-        return flag_count
-
+    """輔助方法"""
     def reveal_all_mines(self):
-        for r in range(self.board_height):
-            for c in range(self.board_width):
-                cell = self.cells[r][c]
+        for r in range(self.gameBoard.height):
+            for c in range(self.gameBoard.width):
+                cell = self.gameBoard.get_cell(r, c)
                 if cell.is_mine():
                     cell.revealed = True
         self.update_board()
 
     def update_board(self):
-        for r in range(self.board_height):
-            for c in range(self.board_width):
-                cell = self.cells[r][c]
+        for r in range(self.gameBoard.height):
+            for c in range(self.gameBoard.width):
+                cell = self.gameBoard.get_cell(r, c)
                 btn = self.buttons[r][c]
                 
                 if self.debug_mode and cell.is_mine() and not cell.revealed:
@@ -378,10 +274,15 @@ class MineSweeper:
                 btn.config(image=img)
 
     def change_difficulty(self, difficulty):
+        """切換難度"""
         self.config = DifficultyConfig(difficulty)
-        self.board_width = self.config.board_width
-        self.board_height = self.config.board_height
-        self.mine_count = self.config.mine_count
+        print(self.config.board_height, self.config.board_width, self.config.name)
+        self.board = GameBoard(
+            self.config.board_width,
+            self.config.board_height,
+            self.config.mine_count
+        )
+        self.buttons:list[list[Button]] = []
         self.frame.destroy()
         self.create_widget()
         self.new_game()
