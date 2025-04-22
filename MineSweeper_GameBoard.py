@@ -59,10 +59,11 @@ class GameBoard:
     
     def count_flags_around(self, r: int, c: int) -> int:
         """數數周圍的旗子"""
-        return sum(1
-            for dr in [-1, 0, 1]
-            for dc in [-1, 0, 1]
-            if dr != 0 or dc != 0
-            and self.is_valid_position(r + dr, c + dc)
-            and self.cells[r + dr][c + dc].flagged
-        )
+        flag_count = 0
+        for dr in [-1, 0, 1]:
+            for dc in [-1, 0, 1]:
+                nr = r + dr
+                nc = c + dc
+                if self.is_valid_position(nr, nc) and self.cells[nr][nc].flagged:
+                    flag_count += 1
+        return flag_count

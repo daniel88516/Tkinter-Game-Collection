@@ -49,7 +49,7 @@ class MineSweeper:
     def create_widget(self):
         """創建你會看到的所有元素"""
         self.frame = Frame(self.window)
-        self.frame.pack()
+        self.frame.pack(padx=20, pady=20)
         self.board_frame = Frame(self.frame)
         self.board_frame.pack()
         for r in range(self.gameBoard.height):
@@ -99,7 +99,7 @@ class MineSweeper:
 
         # 每個方塊的大小是 32 
         width = self.gameBoard.width * 32 + 40  # 左右各加 20 像素邊距
-        height = self.gameBoard.height * 32 + 100  # 加入控制面板高度
+        height = self.gameBoard.height * 32 + 120  # 加入控制面板高度
         
         screen_width = self.window.winfo_screenwidth()
         screen_height = self.window.winfo_screenheight()
@@ -171,7 +171,7 @@ class MineSweeper:
 
         # 旗標不會被展開
         cell = self.gameBoard.get_cell(r, c)
-        if cell.revealed and cell.flagged:
+        if not cell.revealed and cell.flagged:
             return
 
         # 每次按下, 判斷是否為地雷
@@ -202,16 +202,18 @@ class MineSweeper:
 
     def on_chord_click(self, r, c):
         """你想要抄近路，玩的快一些"""
+        print(f"Chord_click: {r}, {c}")
         if self.is_game_over:
             return
         
-        # 只能在 revealed, 數字觸發
+        # 只能在 revealed, 且為數字的時候觸發
         cell = self.gameBoard.get_cell(r, c)
         if not cell.revealed or not cell.is_number():
             return
         
         flag_count = self.gameBoard.count_flags_around(r, c)
         if flag_count != cell.number:
+            print(f"數字不一致, 圖片上寫著{cell.number}, 周圍只有{flag_count}個旗子")
             return
         
         exploded = False
@@ -276,8 +278,7 @@ class MineSweeper:
     def change_difficulty(self, difficulty):
         """切換難度"""
         self.config = DifficultyConfig(difficulty)
-        print(self.config.board_height, self.config.board_width, self.config.name)
-        self.board = GameBoard(
+        self.gameBoard = GameBoard(
             self.config.board_width,
             self.config.board_height,
             self.config.mine_count
@@ -285,6 +286,7 @@ class MineSweeper:
         self.buttons:list[list[Button]] = []
         self.frame.destroy()
         self.create_widget()
+        self.center_window()
         self.new_game()
         
 # main
