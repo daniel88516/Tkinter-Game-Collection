@@ -1,9 +1,6 @@
 from tkinter import *
 from tkinter import messagebox
-import os
-from MineSweeper_Difficulty import DifficultyConfig, Difficulty
 from MineSweeper_GameBoard import GameBoard
-
 class BoardManager:
     """管理一個遊戲版塊, 初始化會用到的一些變數"""
     def __init__(self, parent_frame, tile_images, name, width, height, mine_count, debug_mode_var, on_win_callback):
@@ -29,10 +26,9 @@ class BoardManager:
         self.board_frame.pack(side=LEFT, padx=10)
         
         # 遊戲版名字
-        Label(self.board_frame, text=self.name, font=("Arial", 12, "bold")).pack(pady=5)
         
         # 遊戲板按鈕
-        self.buttons_frame = Frame(self.board_frame)
+        self.buttons_frame = LabelFrame(self.board_frame, text=self.name)
         self.buttons_frame.pack()
         
         for r in range(self.gameBoard.height):
@@ -279,136 +275,3 @@ class BoardManager:
             self.buttons.append(row_buttons)
         
         self.reset()
-
-class MineSweeper:
-    """主遊戲類"""
-    def __init__(self, window:Tk, difficulty: Difficulty=Difficulty.NORMAL, board_count=2):
-        self.window = window
-        self.config = DifficultyConfig(difficulty)
-        self.debug_mode = BooleanVar(value=False)
-        self.board_managers = []
-        
-        self.load_images()
-        self.create_widget(board_count)
-        self.center_window()
-        self.new_game()
-    
-    def start(self):
-        """啟動遊戲"""
-        self.window.mainloop()
-        
-    def load_images(self):
-        """加載圖片"""
-        base_path = os.path.join(os.path.dirname(__file__), f"Images")
-        self.tile_images = {}
-        for i in range(1, 9):
-            self.tile_images[f"Tile{i}"] = PhotoImage(file=os.path.join(base_path, f"Tile{i}.png"))
-        self.tile_images["TileEmpty"]    = PhotoImage(file=os.path.join(base_path, "TileEmpty.png"))
-        self.tile_images["TileExploded"] = PhotoImage(file=os.path.join(base_path, "TileExploded.png"))
-        self.tile_images["TileFlag"]     = PhotoImage(file=os.path.join(base_path, "TileFlag.png"))
-        self.tile_images["TileUnknown"]  = PhotoImage(file=os.path.join(base_path, "TileUnknown.png"))
-        self.tile_images["TileMine"]     = PhotoImage(file=os.path.join(base_path, "TileMine.png"))
-        
-    def create_widget(self, board_count):
-        """創建UI元素"""
-        self.frame = Frame(self.window)
-        self.frame.pack(padx=20, pady=20)
-        
-        # 創建遊戲板容器
-        self.boards_container = Frame(self.frame)
-        self.boards_container.pack()
-        
-        # 創建多個遊戲板
-        for i in range(board_count):
-            board_manager = BoardManager(
-                self.boards_container,
-                self.tile_images,
-                f"遊戲板 {i+1}",
-                self.config.board_width,
-                self.config.board_height,
-                self.config.mine_count,
-                self.debug_mode,
-                self.on_board_win
-            )
-            self.board_managers.append(board_manager)
-            
-        # 控制面板
-        self.create_control_panel()
-   
-    def create_control_panel(self):
-        """創建控制面板"""
-        control_frame = Frame(self.frame)
-        control_frame.pack(pady=5)
-        
-        # 難度按鈕
-        difficulty_frame = Frame(control_frame)
-        difficulty_frame.pack(side=TOP, pady=5)
-        
-        for diff in Difficulty: 
-            Button(
-                difficulty_frame,
-                text=DifficultyConfig.CONFIGS[diff]["name"],
-                command=lambda d=diff: self.change_difficulty(d)
-            ).pack(side=LEFT, padx=5)
-        
-        self.reset_button = Button(control_frame, text="重置遊戲", command=self.new_game)
-        self.reset_button.pack(side=LEFT, padx=5)
-        
-        self.debug_button = Button(control_frame, text="Debug 模式：關閉", command=self.toggle_debug_mode)
-        self.debug_button.pack(side=LEFT, padx=5)
-
-    def center_window(self):
-        """調整視窗大小和位置"""
-        self.window.update_idletasks()
-
-        # 計算視窗大小
-        board_width = self.config.board_width * 32
-        total_width = board_width * len(self.board_managers) + 80 + (20 * (len(self.board_managers) - 1))
-        height = self.config.board_height * 32 + 150
-        
-        screen_width = self.window.winfo_screenwidth()
-        screen_height = self.window.winfo_screenheight()
-        x = (screen_width - total_width) // 2
-        y = (screen_height - height) // 2
-        self.window.geometry(f"{total_width}x{height}+{x}+{y}")
-        
-    def toggle_debug_mode(self):
-        """切換Debug模式"""
-        self.debug_mode.set(not self.debug_mode.get())
-        self.debug_button.config(text=f"Debug 模式：{'開啟' if self.debug_mode.get() else '關閉'}")
-        self.update_all_boards()
-    
-    def update_all_boards(self):
-        """更新所有遊戲板"""
-        for board_manager in self.board_managers:
-            board_manager.update_board()
-    
-    def new_game(self):
-        """開始新遊戲"""
-        for board_manager in self.board_managers:
-            board_manager.reset()
-    
-    def on_board_win(self, board_manager):
-        """處理遊戲板勝利事件"""
-        # 檢查是否所有遊戲板都贏了
-        all_won = all(bm.is_game_over for bm in self.board_managers)
-        if all_won:
-            messagebox.showinfo("恭喜", "你完成了所有遊戲板！")
-    
-    def change_difficulty(self, difficulty):
-        """更改難度"""
-        self.config = DifficultyConfig(difficulty)
-        for board_manager in self.board_managers:
-            board_manager.change_difficulty(
-                self.config.board_width,
-                self.config.board_height,
-                self.config.mine_count
-            )
-        self.center_window()
-        
-# main
-if __name__ == "__main__":
-    window = Tk()
-    window.title("多人踩地雷")
-    game = MineSweeper(window, Difficulty.EASY, 5)  # 預設創建2個遊戲板
-    game.start()
