@@ -45,7 +45,7 @@ class GameMenu:
             "Zombie": "Z_main.py",
             "Monty Hall": "ThreeHall.py",
             "井字遊戲": "TicTacToe.py",
-            "踩地雷": "MineSweeper.py",
+            "踩地雷": "MineSweeper_SinglePlayer.py",
         }
 
         for name in self.games:
