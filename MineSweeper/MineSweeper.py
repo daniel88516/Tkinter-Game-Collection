@@ -142,12 +142,12 @@ class MineSweeper:
         self.server_send_message_entry.grid(row=2, column=1, padx=5)
 
         server_button_frame = Frame(server_frame)
-        self.start_btn = Button(
+        self.start_server_btn = Button(
             server_button_frame,
             text="開啟伺服器",
             command=lambda :self.network_manager.toggle_server(self.server_ip_var.get(), int(self.server_port_var.get()))
         )
-        self.start_btn.pack(side=LEFT, padx=5)
+        self.start_server_btn.pack(side=LEFT, padx=5)
 
         self.server_send_message_btn = Button(
             server_button_frame,
@@ -258,11 +258,14 @@ class MineSweeper:
         self.center_window()
     
     def on_networkManager_start_server_success(self, ip:str, port:int):
-        self.start_btn.config(text="關閉伺服器")
+        self.start_server_btn.config(text="關閉伺服器")
         self.server_status.config(
             text=f"[伺服器狀態] 運行中 ({ip}:{port})", 
             fg="green"
         )
+        # disable client buttons
+        self.client_send_message_btn.config(state="disabled")
+        self.connect_btn.config(state="disabled")
         
     def on_networkManager_start_server_failed(self, e):
         self.server_status.config(
@@ -271,8 +274,12 @@ class MineSweeper:
         )
         
     def on_networkManager_close_server_success(self):
-        self.start_btn.config(text="開啟伺服器")
+        self.start_server_btn.config(text="開啟伺服器")
         self.server_status.config(text="[伺服器狀態] 已關閉", fg="black")
+
+        self.client_send_message_btn.config(state="active")
+        self.connect_btn.config(state="active")
+
     
     def on_networkManager_close_server_failed(self, e):
         self.server_status.config(
@@ -293,10 +300,22 @@ class MineSweeper:
             fg="red"
         )
         print(f"[錯誤] 伺服器連接失敗: {str(e)}")
-    
+        
+    def on_networkManager_client_connect_success(self, ip:str, port:int, client_ip:str, client_port:int):
+        self.connect_btn.config(text="斷開連接")
+        self.server_status.config(
+            text=f"[伺服器狀態] 已連接到 {ip}:{port}", 
+            fg="green"
+        )
+        self.client_status.config(text=f"[連線狀態] 已連接 {client_ip}:{client_port}", fg="green")
+        self.server_send_message_btn.config(state="disabled")
+        self.start_server_btn.config(state="disabled")
+
     def on_networkManager_server_disconnect_success(self):
         self.client_status.config(text="[連線狀態] 已斷線", fg="red")
         print("[連線狀態] 已斷線")
+        self.server_send_message_btn.config(state="active")
+        self.start_server_btn.config(state="active")
     
     def on_networkManager_server_disconnect_failed(self, e):
         self.client_status.config(
@@ -304,14 +323,7 @@ class MineSweeper:
             fg="red"
         )
         print(f"[錯誤] 伺服器斷線失敗: {str(e)}")
-    
-    def on_networkManager_client_connect_success(self, ip:str, port:int):
-        self.connect_btn.config(text="斷開連接")
-        self.client_status.config(
-            text=f"[連線狀態] 已連接到 {ip}:{port}", 
-            fg="green"
-        )
-    
+
     def on_networkManager_client_connect_failed(self, e):
         self.client_status.config(
             text=f"[錯誤] 連接失敗: {str(e)}", 

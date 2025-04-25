@@ -69,33 +69,51 @@ class NetworkManager:
             self.on_start_server_failed.emit(e)
             return False
     
+    # def stop_server(self):
+    #     """關掉伺服器"""
+    #     if not self.is_server_running:
+    #         return
+    #     try:
+    #         test_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    #         test_socket.connect(('127.0.0.1', self.server_socket.getsockname()[1]))
+    #         test_socket.close()
+    #     except Exception as e:
+    #         print(f"測試連接異常: {str(e)}")
+    #     finally:
+    #         self.is_server_running = False
+    #         self.connection_status = False
+
+    #     self._safe_close(self.client_socket)
+    #     self._safe_close(self.server_socket)
+    #     print("NetworkManager: 伺服器已關閉")
+    #     self.on_close_server_success.emit()
+        
     def stop_server(self):
-        """關掉伺服器"""
         if not self.is_server_running:
             return
+        # try:
+        #     socket.socket(socket.AF_INET, socket.SOCK_STREAM).connect(
+        #         self.server_socket.getsockname()
+        # )
+        #     print("我連上了自己")
+        # except:
+        #     print("我連不上假的自己!")
+            
         try:
-            test_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            test_socket.connect(('127.0.0.1', self.server_socket.getsockname()[1]))
-            test_socket.close()
-        except Exception as e:
-            print(f"測試連接異常: {str(e)}")
-        finally:
+            if self.client_socket:
+                # self._safe_close(self.client_socket)
+                self.client_socket.close()
+            if self.server_socket:
+                # self._safe_close(self.server_socket)
+                self.server_socket.close()
             self.is_server_running = False
             self.connection_status = False
-
-        self._safe_close(self.client_socket)
-        self._safe_close(self.server_socket)
-        print("NetworkManager: 伺服器已关闭")
-        self.on_close_server_success.emit()
+            print("NetworkManager: 伺服器關閉")
+            self.on_close_server_success.emit()
     
-    def _safe_close(self, sock: socket.socket):
-        """關閉 socket"""
-        if sock:
-            try:
-                sock.shutdown(socket.SHUT_RDWR)
-                sock.close()
-            except (OSError, AttributeError) as e:
-                pass  # 處理 socket 已經關閉的情況
+        except Exception as e:
+            print("NetworkManager: 伺服器關閉失敗" + str(e))
+            self.on_close_server_failed.emit(e)
         
     def listen_clients(self):
         while self.is_server_running:
@@ -107,16 +125,22 @@ class NetworkManager:
                 self.receive_thread.start()
                 print(f"NetworkManager: 連上了客戶端, {addr}")   
                 self.on_server_connect_success.emit(addr)
+            # winerror 10038: socket operation on non-socket
+            except OSError as e:
+                pass
             except Exception as e:
                 print("NetworkManager: 傾聽客戶端失敗" + str(e))
                 self.on_server_connect_failed.emit(e)
                 return False
 
     def toggle_connection(self, ip:str, port:int):
-        if not self.connection_status:
-            self.connect_to_server(ip, port)
-        else:
-            self.disconnect()
+        try: 
+            if not self.connection_status:
+                self.connect_to_server(ip, port)
+            else:
+                self.disconnect()
+        except ValueError as e:
+            self.on_error.emit(e)
 
     def connect_to_server(self, ip:str, port:int):
         try:
@@ -124,7 +148,8 @@ class NetworkManager:
             self.client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             self.client_socket.connect((ip, port))
             print(f"NetworkManager: 客戶端連線成功")
-            self.on_client_connect_success.emit(ip, port)
+            client_ip, client_port = self.client_socket.getsockname()
+            self.on_client_connect_success.emit(ip, port, client_ip, client_port)
             
             self.receive_thread = threading.Thread(target=self.receive_message, daemon=True)
             self.receive_thread.start()
@@ -173,7 +198,19 @@ class NetworkManager:
         else:
             self.disconnect()
             print("NetworkManager: 客戶端斷線")
-        
+
+    def _handle_connection_loss(self):
+        """連線不見的統一處理"""
+        if self.is_server_running:
+            # server 模式只關閉 client socket
+            self._safe_close(self.client_socket)
+            self.client_socket = None
+            self.connection_status = False
+            print("NetworkManager: 客戶端斷線")
+            self.on_server_disconnect_success.emit()
+        else:
+            # 客戶端完全斷開
+            self.disconnect()
 if __name__ == "__main__":
     app = NetworkManager()
     app.start()
