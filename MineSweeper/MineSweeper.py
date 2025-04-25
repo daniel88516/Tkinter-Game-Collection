@@ -4,19 +4,18 @@ import os
 from MineSweeper_Difficulty import DifficultyConfig, Difficulty
 from MineSweeper_BoardManager import BoardManager
 from MineSweeper_NetworkManager import NetworkManager
-from MineSweeper_Event import Event
-
+from MineSweeper_GameMessage import GameMessage, GameMessageType
 class MineSweeper:
     """主遊戲類"""
     def __init__(self, window:Tk):
         self.load_images()
         self.create_variable()
-        self.create_eventHandler()
         self.create_gameBoard()
+        self.create_gameBoard_eventHandler()
+        self.create_network_eventHandler()
         self.create_control_panel()
         self.create_network_panel()
         self.center_window()
-        self.new_game()
 
     def start(self):
         """啟動遊戲"""
@@ -37,20 +36,57 @@ class MineSweeper:
     def create_variable(self):
         self.window:Tk = window
         self.debug_mode = BooleanVar(value=False)
-        self.config = DifficultyConfig(Difficulty.EASY)
         self.board_managers:list[BoardManager] = []
+        self.config = DifficultyConfig(Difficulty.EASY)
         self.network_manager:NetworkManager = NetworkManager()
         
         self.server_ip_var:StringVar = StringVar(value=self.network_manager.get_local_ip())
         self.server_port_var:StringVar = StringVar(value="12345")
         
-        self.client_ip_var:StringVar = StringVar()
-        self.client_port_var:StringVar = StringVar()
+        self.client_ip_var:StringVar = StringVar(value=self.network_manager.get_local_ip())
+        self.client_port_var:StringVar = StringVar(value="12345")
         
         self.server_message_var:StringVar = StringVar(value="")
         self.client_message_var:StringVar = StringVar(value="")
+         
+    def create_gameBoard(self):
+        """創建UI元素"""
+        self.frame = Frame(self.window)
+        self.frame.pack(padx=20, pady=20)
         
-    def create_eventHandler(self):
+        self.boards_container = Frame(self.frame)
+        self.boards_container.pack()
+        
+        self.player_board = BoardManager(
+            self.boards_container,
+            self.tile_images,
+            "玩家遊戲板",
+            self.config,
+            self.debug_mode,
+            False
+        )
+        
+        self.opponent_board = BoardManager(
+            self.boards_container,
+            self.tile_images,
+            "對手遊戲板",
+            self.config,
+            self.debug_mode,
+            True
+        )
+        self.board_managers.append(self.player_board)
+        self.board_managers.append(self.opponent_board)
+    
+    def create_gameBoard_eventHandler(self):
+        self.player_board.on_reveal_cell.subscribe(self.on_player_reveal_cell)
+        self.player_board.on_toggle_flag_cell.subscribe(self.on_player_toggle_flag_cell)
+        self.player_board.on_chord_click_cell.subscribe(self.on_player_chord_click_cell)
+        self.player_board.on_chord_press_cell.subscribe(self.on_player_chord_press_cell)
+        self.player_board.on_chord_release_cell.subscribe(self.on_player_chord_release_cell)
+        self.player_board.on_game_over.subscribe(self.on_player_game_over)
+        self.player_board.on_complete.subscribe(self.on_player_complete)
+   
+    def create_network_eventHandler(self):
         # server events, 開關, 連線, 斷線
         self.network_manager.on_start_server_success.subscribe(self.on_networkManager_start_server_success)
         self.network_manager.on_start_server_failed.subscribe(self.on_networkManager_start_server_failed)
@@ -70,38 +106,17 @@ class MineSweeper:
         # 接收訊息
         self.network_manager.on_receive_message_success.subscribe(self.on_networkManager_receive_message_success)
         self.network_manager.on_receive_message_failed.subscribe(self.on_networkManager_receive_message_failed) 
-    
-    def create_gameBoard(self):
-        """創建UI元素"""
-        self.frame = Frame(self.window)
-        self.frame.pack(padx=20, pady=20)
         
-        self.boards_container = Frame(self.frame)
-        self.boards_container.pack()
-        
-        self.player_board = BoardManager(
-            self.boards_container,
-            self.tile_images,
-            "玩家遊戲板",
-            self.config.board_width,
-            self.config.board_height,
-            self.config.mine_count,
-            self.debug_mode,
-            self.on_board_win
-        )
-        
-        self.opponent_board = BoardManager(
-            self.boards_container,
-            self.tile_images,
-            "對手遊戲板",
-            self.config.board_width,
-            self.config.board_height,
-            self.config.mine_count,
-            self.debug_mode,
-            self.on_board_win
-        )
-        self.board_managers.append(self.player_board)
-        self.board_managers.append(self.opponent_board)
+        self.message_handlers = {    
+            GameMessageType.CELL_REVEAL: lambda self, msg: self.opponent_board.on_reveal(msg.data["row"], msg.data["col"], msg.data["seed"]),
+            GameMessageType.TOGGLE_FLAG: lambda self, msg: self.opponent_board.on_toggle_flag(msg.data["row"], msg.data["col"]),
+            GameMessageType.CHORD_CLICK: lambda self, msg: self.opponent_board.on_chord_click(msg.data["row"], msg.data["col"]),
+            GameMessageType.CHORD_PRESS: lambda self, msg: self.opponent_board.on_chord_press(msg.data["row"], msg.data["col"]),
+            GameMessageType.CHORD_RELEASE: lambda self, msg: self.opponent_board.on_chord_release(msg.data["row"], msg.data["col"]),
+            GameMessageType.GAME_OVER: lambda self, msg: self.opponent_board.game_over(),
+            GameMessageType.RESET: lambda self, msg: self.new_game(),
+            GameMessageType.CHANGE_DIFFICULTY: lambda self,msg :self.change_difficulty(msg.data["difficulty"]),
+        }
    
     def create_control_panel(self):
         """控制面板"""
@@ -116,10 +131,10 @@ class MineSweeper:
             Button(
                 difficulty_frame,
                 text=DifficultyConfig.CONFIGS[diff]["name"],
-                command=lambda d=diff: self.change_difficulty(d)
+                command=lambda d=diff: [self.change_difficulty(d), self.send_change_difficulty_message(d)]
             ).pack(side=LEFT, padx=5)
         
-        reset_button = Button(control_frame, text="重置遊戲", command=self.new_game)
+        reset_button = Button(control_frame, text="重置遊戲", command= lambda: [self.new_game(), self.new_game.send_reset_message()] )
         reset_button.pack(side=LEFT, padx=5)
         
         self.debug_button = Button(control_frame, text="Debug 模式：關閉", command=self.toggle_debug_mode)
@@ -234,28 +249,28 @@ class MineSweeper:
         """開始新遊戲"""
         for board_manager in self.board_managers:
             board_manager.reset()
-    
-    def on_board_win(self):
-        """處理遊戲板勝利事件"""
-        for i in range(len(self.board_managers)):
-            if self.board_managers[i].is_game_over:
-                self.board_managers[i].show_all_mines()
-                messagebox.showinfo("恭喜", f"{self.board_managers[i].name} 完成了遊戲！")
-                
-        all_won = all(bm.is_game_over for bm in self.board_managers)
-        if all_won:
-            messagebox.showinfo("恭喜", "你完成了所有遊戲板！")
-    
-    def change_difficulty(self, difficulty):
+    def send_reset_message(self):
+        """傳送重置的訊息"""
+        # 不能放到 new_game 當中, 因為會彼此傳來傳去
+        message:GameMessage = GameMessage(type=GameMessageType.RESET,data={})
+        self.network_manager.send_game_message(message)
+
+    def change_difficulty(self, difficulty: Difficulty):
         """更改難度"""
-        self.config = DifficultyConfig(difficulty)
-        for board_manager in self.board_managers:
-            board_manager.change_difficulty(
-                self.config.board_width,
-                self.config.board_height,
-                self.config.mine_count
-            )
-        self.center_window()
+        if self.config != DifficultyConfig(difficulty):
+            print("Not The Same")
+            self.config = DifficultyConfig(difficulty)
+            for board_manager in self.board_managers:
+                board_manager.change_difficulty(self.config)
+            self.center_window()
+        else: 
+            # 難度不變,但需要清空場地
+            self.new_game()
+            self.send_reset_message()
+            
+    def send_change_difficulty_message(self, difficulty: Difficulty):
+        message:GameMessage = GameMessage(GameMessageType.CHANGE_DIFFICULTY, data={"difficulty":difficulty.name})
+        self.network_manager.send_game_message(message)        
     
     def on_networkManager_start_server_success(self, ip:str, port:int):
         self.start_server_btn.config(text="關閉伺服器")
@@ -280,7 +295,6 @@ class MineSweeper:
         self.client_send_message_btn.config(state="active")
         self.connect_btn.config(state="active")
 
-    
     def on_networkManager_close_server_failed(self, e):
         self.server_status.config(
             text=f"[錯誤] 伺服器關閉失敗: {str(e)}", 
@@ -293,6 +307,9 @@ class MineSweeper:
             fg="green"
         )
         print(f"[連線狀態] 已連接 {addr[0]}:{addr[1]}")
+        self.change_difficulty(Difficulty.EASY)
+        
+        self.send_change_difficulty_message(Difficulty.EASY)
     
     def on_networkManager_server_connect_failed(self, e):
         self.client_status.config(
@@ -342,12 +359,69 @@ class MineSweeper:
         )
         print(f"[錯誤] 客戶端斷線失敗: {str(e)}")
 
-    def on_networkManager_receive_message_success(self, message:str):
-        self.client_message_var.set(message)
-        print(f"收到訊息: {message}")
-
+    def on_networkManager_receive_message_success(self, message):
+        if not isinstance(message, GameMessage):
+            print(f"收到一般訊息: {message}")
+            return             
+        handler = self.message_handlers.get(message.type)
+        if handler: 
+            handler(self, message)
+        else: 
+            print("沒有找到訊息的對應處理方法")
+            
     def on_networkManager_receive_message_failed(self, e):
         messagebox.showerror("斷開連線", f"{str(e)}")
+        
+    def on_player_reveal_cell(self, r:int, c:int, seed:int):
+        message:GameMessage = GameMessage(
+            type=GameMessageType.CELL_REVEAL,
+            data={"row":r, "col":c, "seed":seed}
+        )
+        self.network_manager.send_game_message(message)
+
+    def on_player_toggle_flag_cell(self, r:int, c:int):
+        message:GameMessage = GameMessage(
+            type=GameMessageType.TOGGLE_FLAG,
+            data={"row":r, "col":c}
+        )
+        self.network_manager.send_game_message(message)
+
+    def on_player_chord_click_cell(self, r:int, c:int):
+        message:GameMessage = GameMessage(
+            type=GameMessageType.CHORD_CLICK,
+            data={"row":r, "col":c}
+        )
+        self.network_manager.send_game_message(message)
+        
+    def on_player_chord_press_cell(self, r:int, c:int):
+        message:GameMessage = GameMessage(
+            type=GameMessageType.CHORD_PRESS,
+            data={"row":r, "col":c}
+        )
+        self.network_manager.send_game_message(message)
+        
+    def on_player_chord_release_cell(self, r:int, c:int):
+        message:GameMessage = GameMessage(
+            type=GameMessageType.CHORD_RELEASE,
+            data={"row":r, "col":c}
+        )
+        self.network_manager.send_game_message(message)
+    
+    def on_player_game_over(self):
+        message:GameMessage = GameMessage(
+            type=GameMessageType.GAME_OVER,
+            data={}
+        )
+        self.network_manager.send_game_message(message)
+
+    def on_player_complete(self):
+        """處理遊戲板勝利事件"""
+        # message:GameMessage = GameMessage(
+        #     type=GameMessageType.GAME_COMPLETE,
+        #     data={}
+        # )
+        # self.network_manager.send_game_message(message)
+        
 # main
 if __name__ == "__main__":
     window = Tk()

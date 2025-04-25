@@ -1,13 +1,15 @@
 import socket
 import threading
+import json
 from MineSweeper_Event import Event
+from MineSweeper_GameMessage import GameMessage
 
 class NetworkManager:    
     def __init__(self):
-        self.create_callbacks()
+        self.create_events()
         self.create_variable()
         
-    def create_callbacks(self):
+    def create_events(self):
         # server events, 開關, 連線, 斷線
         self.on_start_server_success:Event = Event()
         self.on_start_server_failed:Event = Event()
@@ -68,37 +70,10 @@ class NetworkManager:
             print(f"NetworkManager: 伺服器啟動失敗: {str(e)}")
             self.on_start_server_failed.emit(e)
             return False
-    
-    # def stop_server(self):
-    #     """關掉伺服器"""
-    #     if not self.is_server_running:
-    #         return
-    #     try:
-    #         test_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    #         test_socket.connect(('127.0.0.1', self.server_socket.getsockname()[1]))
-    #         test_socket.close()
-    #     except Exception as e:
-    #         print(f"測試連接異常: {str(e)}")
-    #     finally:
-    #         self.is_server_running = False
-    #         self.connection_status = False
-
-    #     self._safe_close(self.client_socket)
-    #     self._safe_close(self.server_socket)
-    #     print("NetworkManager: 伺服器已關閉")
-    #     self.on_close_server_success.emit()
         
     def stop_server(self):
         if not self.is_server_running:
             return
-        # try:
-        #     socket.socket(socket.AF_INET, socket.SOCK_STREAM).connect(
-        #         self.server_socket.getsockname()
-        # )
-        #     print("我連上了自己")
-        # except:
-        #     print("我連不上假的自己!")
-            
         try:
             if self.client_socket:
                 # self._safe_close(self.client_socket)
@@ -167,6 +142,14 @@ class NetworkManager:
             print(f"NetworkManager: 客戶端斷線失敗: {str(e)}")
             self.on_client_disconnect_failed.emit(e)
 
+    def send_game_message(self, message:GameMessage):
+        """傳送遊戲訊息"""
+        try: 
+            json_str = message.to_json()
+            self.send_message(json_str)
+        except Exception as e:
+            print(f"NetworkManager: 傳送遊戲訊息失敗{str(e)}")
+            
     def send_message(self, message:str):
         """傳送訊息"""
         if not self.client_socket:
@@ -185,8 +168,12 @@ class NetworkManager:
                 message = self.client_socket.recv(1024).decode('utf-8')
                 if not message:
                     break
-                print(f"NetworkManager: 收到訊息: {message}")
-                self.on_receive_message_success.emit(message)
+                try:
+                    game_message = GameMessage.from_json(message)
+                    print(f"NetworkManager: 收到遊戲訊息: {game_message}")
+                    self.on_receive_message_success.emit(game_message)
+                except json.JSONDecodeError:
+                    self.on_receive_message_success.emit(message)
             except Exception as e:
                 # 遠端主機強制關閉現存的連線
                 self.on_receive_message_failed.emit(e)

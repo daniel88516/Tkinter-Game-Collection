@@ -1,11 +1,12 @@
 import random
 from MineSweeper_Cell import Cell
+from MineSweeper_Difficulty import DifficultyConfig
 class GameBoard:
     """遊戲初始化"""
-    def __init__(self, board_width: int, board_height: int, mine_count: int, name:str="我沒有名字...嗚嗚嗚"):
-        self.width:int = board_width
-        self.height:int = board_height
-        self.mine_count:int = mine_count
+    def __init__(self, config:DifficultyConfig, name:str="我沒有名字...嗚嗚嗚"):
+        self.width:int = config.board_width
+        self.height:int = config.board_height
+        self.mine_count:int = config.mine_count
         self.name:str = name
         self.create_variable()
         self.reset()
@@ -20,7 +21,7 @@ class GameBoard:
                      for r in range(self.height)]
         self.first_click = True
     
-    def place_mines(self, first_r: int, first_c: int):
+    def place_mines(self, first_r: int, first_c: int, seed:int):
         """放地雷, 確保第一次按下, 該位置八方位領域展開的區域不會爆炸"""
         safe_cells = set()
         for dr in [-1, 0, 1]:
@@ -31,6 +32,7 @@ class GameBoard:
                     safe_cells.add((nr, nc))
         
         count = 0
+        random.seed(seed)
         while count < self.mine_count:
             r = random.randrange(self.height)
             c = random.randrange(self.width)
