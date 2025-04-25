@@ -47,15 +47,30 @@ class MineSweeper:
         self.client_ip_var:StringVar = StringVar()
         self.client_port_var:StringVar = StringVar()
         
+        self.server_message_var:StringVar = StringVar(value="")
+        self.client_message_var:StringVar = StringVar(value="")
+        
     def create_eventHandler(self):
-        self.network_manager.on_toggle_server.subscribe(self.on_networkManager_connection_status_change)
+        # server events, 開關, 連線, 斷線
+        self.network_manager.on_start_server_success.subscribe(self.on_networkManager_start_server_success)
         self.network_manager.on_start_server_failed.subscribe(self.on_networkManager_start_server_failed)
+        self.network_manager.on_close_server_success.subscribe(self.on_networkManager_close_server_success)
+        self.network_manager.on_close_server_failed.subscribe(self.on_networkManager_close_server_failed)
+        self.network_manager.on_server_connect_success.subscribe(self.on_networkManager_server_connect_success)
+        self.network_manager.on_server_connect_failed.subscribe(self.on_networkManager_server_connect_failed)
+        self.network_manager.on_server_disconnect_success.subscribe(self.on_networkManager_server_disconnect_success)
+        self.network_manager.on_server_disconnect_failed.subscribe(self.on_networkManager_server_disconnect_failed)
         
-        self.network_manager.on_connect_server_success.subscribe(self.on_networkManager_on_connect_server_success)
-        self.network_manager.on_connect_server_failed.subscribe(self.on_networkManager_on_connect_server_failed)
+        # client events, 連線, 斷線
+        self.network_manager.on_client_connect_success.subscribe(self.on_networkManager_client_connect_success)
+        self.network_manager.on_client_connect_failed.subscribe(self.on_networkManager_client_connect_failed)
+        self.network_manager.on_client_disconnect_success.subscribe(self.on_networkManager_client_disconnect_success)
+        self.network_manager.on_client_disconnect_failed.subscribe(self.on_networkManager_client_disconnect_failed)
         
-        self.network_manager.on_client_disconnect.subscribe(self.on_networkManager_on_client_disconnect)
-        self.network_manager.on_listen_client_successs.subscribe(self.on_networkManager_listen_client_success)
+        # 接收訊息
+        self.network_manager.on_receive_message_success.subscribe(self.on_networkManager_receive_message_success)
+        self.network_manager.on_receive_message_failed.subscribe(self.on_networkManager_receive_message_failed) 
+    
     def create_gameBoard(self):
         """創建UI元素"""
         self.frame = Frame(self.window)
@@ -116,49 +131,76 @@ class MineSweeper:
 
         Label(server_frame, text="IP:").grid(row=0, column=0)
         self.server_ip_entry = Entry(server_frame, textvariable=self.server_ip_var)
-        self.server_ip_entry.grid(row=0, column=1)
+        self.server_ip_entry.grid(row=0, column=1, padx=5)
 
         Label(server_frame, text="Port:").grid(row=1, column=0)
         self.server_port_entry = Entry(server_frame, textvariable=self.server_port_var)
-        self.server_port_entry.grid(row=1, column=1)
+        self.server_port_entry.grid(row=1, column=1, padx=5)
+        
+        Label(server_frame, text="訊息:").grid(row=2, column=0)
+        self.server_send_message_entry = Entry(server_frame, textvariable=self.server_message_var)
+        self.server_send_message_entry.grid(row=2, column=1, padx=5)
 
+        server_button_frame = Frame(server_frame)
         self.start_btn = Button(
-            server_frame, 
+            server_button_frame,
             text="開啟伺服器",
             command=lambda :self.network_manager.toggle_server(self.server_ip_var.get(), int(self.server_port_var.get()))
         )
-        self.start_btn.grid(row=2, columnspan=2, pady=5)
+        self.start_btn.pack(side=LEFT, padx=5)
+
+        self.server_send_message_btn = Button(
+            server_button_frame,
+            text="發送訊息",
+            command=lambda :self.network_manager.send_message(f"[伺服器訊息]{self.server_message_var.get()}")
+        )
+        self.server_send_message_btn.pack(side=LEFT, padx=5)
+        server_button_frame.grid(row=3, columnspan=2, pady=5)
 
         self.server_status = Label(
             server_frame, 
             text="[伺服器狀態] 未啟動"
         )
-        self.server_status.grid(row=3, columnspan=2)
-
+        self.server_status.grid(row=4, columnspan=2)
+        
         # 客戶端區塊
         client_frame = LabelFrame(self.window, text="客戶端設定")
         client_frame.pack(pady=10, padx=10, fill="x", side=LEFT)
 
         Label(client_frame, text="目標IP:").grid(row=0, column=0)
         self.client_ip_entry = Entry(client_frame, textvariable=self.client_ip_var)
-        self.client_ip_entry.grid(row=0, column=1)
+        self.client_ip_entry.grid(row=0, column=1, padx=5)
 
         Label(client_frame, text="目標Port:").grid(row=1, column=0)
         self.client_port_entry = Entry(client_frame, textvariable=self.client_port_var)
-        self.client_port_entry.grid(row=1, column=1)
-
+        self.client_port_entry.grid(row=1, column=1, padx=5)
+        
+        Label(client_frame, text="訊息:").grid(row=2, column=0)
+        self.client_send_message_entry = Entry(client_frame, textvariable=self.client_message_var)
+        self.client_send_message_entry.grid(row=2, column=1, padx=5)
+        
+        client_button_frame = Frame(client_frame)
         self.connect_btn = Button(
-            client_frame,
+            client_button_frame,
             text="連接伺服器",
             command=lambda :self.network_manager.toggle_connection(self.client_ip_var.get(), int(self.client_port_var.get()))
         )
-        self.connect_btn.grid(row=2, columnspan=2, pady=5)
+        self.connect_btn.pack(side=LEFT, padx=5)
+
+        self.client_send_message_btn = Button(
+            client_button_frame,
+            text="發送訊息",
+            command=lambda :self.network_manager.send_message(f"[客戶端訊息]{self.client_message_var.get()}")
+        )
+        self.client_send_message_btn.pack(side=LEFT, padx=5)
+        client_button_frame.grid(row=3, columnspan=2, pady=5)
+
 
         self.client_status = Label(
             client_frame,
             text="[連線狀態] 未連接"
         )
-        self.client_status.grid(row=3, columnspan=2)
+        self.client_status.grid(row=4, columnspan=2)
         
     def center_window(self):
         """調整視窗大小和位置"""
@@ -215,54 +257,85 @@ class MineSweeper:
             )
         self.center_window()
     
-    def on_networkManager_connection_status_change(self, is_running:bool):
-        ip = self.server_ip_var.get()
-        port = self.server_port_var.get()
-        if is_running: 
-            self.start_btn.config(text="關閉伺服器")
-            self.server_status.config(
-                text=f"[伺服器狀態] 運行中 ({ip}:{port})", 
-                fg="green"
-            )
-            print(f"伺服器啟動成功: {ip}:{port}")
-        else: 
-            self.start_btn.config(text="開啟伺服器")
-            self.server_status.config(text="[伺服器狀態] 已關閉", fg="black")
-            print(f"伺服器關閉: {ip}:{port}")
-    
+    def on_networkManager_start_server_success(self, ip:str, port:int):
+        self.start_btn.config(text="關閉伺服器")
+        self.server_status.config(
+            text=f"[伺服器狀態] 運行中 ({ip}:{port})", 
+            fg="green"
+        )
+        
     def on_networkManager_start_server_failed(self, e):
         self.server_status.config(
             text=f"[錯誤] 伺服器啟動失敗: {str(e)}", 
             fg="red"
         )
+        
+    def on_networkManager_close_server_success(self):
+        self.start_btn.config(text="開啟伺服器")
+        self.server_status.config(text="[伺服器狀態] 已關閉", fg="black")
     
-    def on_networkManager_on_connect_server_success(self):
-        ip = self.client_ip_var.get()
-        port = self.client_port_var.get()
+    def on_networkManager_close_server_failed(self, e):
+        self.server_status.config(
+            text=f"[錯誤] 伺服器關閉失敗: {str(e)}", 
+            fg="red"
+        )
+
+    def on_networkManager_server_connect_success(self, addr):
+        self.client_status.config(
+            text=f"[連線狀態] 已連接 {addr[0]}:{addr[1]}", 
+            fg="green"
+        )
+        print(f"[連線狀態] 已連接 {addr[0]}:{addr[1]}")
+    
+    def on_networkManager_server_connect_failed(self, e):
+        self.client_status.config(
+            text=f"[錯誤] 伺服器連接失敗: {str(e)}", 
+            fg="red"
+        )
+        print(f"[錯誤] 伺服器連接失敗: {str(e)}")
+    
+    def on_networkManager_server_disconnect_success(self):
+        self.client_status.config(text="[連線狀態] 已斷線", fg="red")
+        print("[連線狀態] 已斷線")
+    
+    def on_networkManager_server_disconnect_failed(self, e):
+        self.client_status.config(
+            text=f"[錯誤] 伺服器斷線失敗: {str(e)}", 
+            fg="red"
+        )
+        print(f"[錯誤] 伺服器斷線失敗: {str(e)}")
+    
+    def on_networkManager_client_connect_success(self, ip:str, port:int):
         self.connect_btn.config(text="斷開連接")
         self.client_status.config(
             text=f"[連線狀態] 已連接到 {ip}:{port}", 
             fg="green"
         )
     
-    def on_networkManager_on_connect_server_failed(self, e):
+    def on_networkManager_client_connect_failed(self, e):
         self.client_status.config(
             text=f"[錯誤] 連接失敗: {str(e)}", 
             fg="red"
         )
 
-    def on_networkManager_on_client_disconnect(self):
+    def on_networkManager_client_disconnect_success(self):
         self.connect_btn.config(text="連接伺服器")
         self.client_status.config(text="[連線狀態] 已斷線", fg="red")
+        print("客戶端斷掉了")
 
-    def on_networkManager_listen_client_success(self, addr):
+    def on_networkManager_client_disconnect_failed(self, e):
         self.client_status.config(
-            text=f"[連線狀態] 已連接 {addr[0]}:{addr[1]}", 
-            fg="green"
+            text=f"[錯誤] 客戶端斷線失敗: {str(e)}", 
+            fg="red"
         )
-        print(f"[連線狀態] 已連接 {addr[0]}:{addr[1]}")
-        
-   
+        print(f"[錯誤] 客戶端斷線失敗: {str(e)}")
+
+    def on_networkManager_receive_message_success(self, message:str):
+        self.client_message_var.set(message)
+        print(f"收到訊息: {message}")
+
+    def on_networkManager_receive_message_failed(self, e):
+        messagebox.showerror("斷開連線", f"{str(e)}")
 # main
 if __name__ == "__main__":
     window = Tk()
