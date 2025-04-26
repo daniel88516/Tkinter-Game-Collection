@@ -5,7 +5,7 @@ from MineSweeper_BoardManager import BoardManager
 from MineSweeper_NetworkManager import NetworkManager
 from MineSweeper_GameMessage import GameMessage, GameMessageType
 from MineSweeper_ChatManager import ChatManager
-from MineSweeper_Counter import CountDownTimer
+from MineSweeper_Timer import CountDownTimer
 class MineSweeper:
     """主遊戲類"""
     def __init__(self, window:Tk):
@@ -59,7 +59,7 @@ class MineSweeper:
         
         self.message_var:StringVar = StringVar(value="")
         self.game_started:bool = False
-        self.timer = CountDownTimer(self.container)
+        self.countdown_timer = CountDownTimer(self.container)
          
     def create_gameBoard(self):
         """創建UI元素"""
@@ -118,13 +118,14 @@ class MineSweeper:
             GameMessageType.CHORD_PRESS: lambda self, msg: self.opponent_board.on_chord_press(msg.data["row"], msg.data["col"]),
             GameMessageType.CHORD_RELEASE: lambda self, msg: self.opponent_board.on_chord_release(msg.data["row"], msg.data["col"]),
             GameMessageType.GAME_OVER: lambda self, msg: self.opponent_board.game_over(),
+            GameMessageType.GAME_COMPLETE: lambda self, msg: self.opponent_board.complete(),
             GameMessageType.RESET: lambda self, msg: self.new_game(),
             GameMessageType.CHANGE_DIFFICULTY: lambda self,msg :self.change_difficulty(msg.data["difficulty"]),
         }
    
     def create_counter_eventHandler(self):
-        self.timer.on_counter_change.subscribe(self.on_timer_count_change)
-        self.timer.on_count_end.subscribe(self.on_timer_count_end)
+        self.countdown_timer.on_counter_change.subscribe(self.on_timer_count_change)
+        self.countdown_timer.on_count_end.subscribe(self.on_timer_count_end)
         
     def create_control_panel(self):
         """控制面板"""
@@ -203,8 +204,10 @@ class MineSweeper:
             data={"state":self.player_board.is_ready}
         )
         self.network_manager.send_game_message(message)
-        if self.can_start_game(): 
-            self.timer.start_countdown()
+        if self.can_start_game():
+            self.player_board.countup_timer.reset()
+            self.opponent_board.countup_timer.reset()
+            self.countdown_timer.start_countdown()
             
             
     def opponent_toggle_ready_state(self, ready_state:bool):
@@ -214,7 +217,9 @@ class MineSweeper:
         else:
             self.chat_manager.add_message("對手未準備", from_self=False)
         if self.can_start_game():
-            self.timer.start_countdown()
+            self.player_board.countup_timer.reset()
+            self.opponent_board.countup_timer.reset()
+            self.countdown_timer.start_countdown()
     
     def can_start_game(self) -> bool:
         return self.player_board.is_ready and self.opponent_board.is_ready
@@ -358,7 +363,7 @@ class MineSweeper:
             type=GameMessageType.GAME_COMPLETE,
             data={"result":"對方完成了!"}
         )
-        self.network_manager.send_game_message()
+        self.network_manager.send_game_message(message)
         
     def on_chatManager_send_message(self, message:str):
         self.network_manager.send_message(message)

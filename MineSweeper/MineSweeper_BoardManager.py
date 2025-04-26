@@ -4,24 +4,31 @@ import os
 from MineSweeper_Difficulty import DifficultyConfig, Difficulty
 from MineSweeper_GameBoard import GameBoard
 from MineSweeper_Event import MyEvent
+from MineSweeper_Timer import CountUpTimer
 from functools import wraps
+
 
 def operation_check(method):
     @wraps(method)
     def wrapper(self, *args, **kwargs):
-        if getattr(self, "is_game_over", True): 
-            return 
+        if getattr(self, "is_game_over", True):
+            return
         if not getattr(self, "is_ready", False):
-            return 
+            return
         if not getattr(self, "is_game_started", False):
             return
         return method(self, *args, **kwargs)
     return wrapper
 
+
 class BoardManager:
     """管理一個遊戲版塊, 初始化會用到的一些變數"""
     def __init__(self, parent_frame, tile_images, name, config:DifficultyConfig, debug_mode_var, is_opponent:bool):
+
         self.parent_frame = parent_frame
+        self.board_frame = Frame(self.parent_frame)
+        self.board_frame.pack(side=LEFT, padx=10)
+        
         self.tile_images = tile_images
         self.name = name
         self.gameBoard = GameBoard(config, name)
@@ -29,8 +36,8 @@ class BoardManager:
         
         self.is_opponent = is_opponent        
         self.debug_mode_var = debug_mode_var  # 這是共有的 debug 變數
-        self.create_variable()
         self.create_events()
+        self.create_variable()
         self.create_ui()
     
     def create_variable(self):
@@ -40,7 +47,9 @@ class BoardManager:
         self.first_click = True
         self.chord_holding = False
         self.flagged_count:int = 0
-        
+        self.countup_timer = CountUpTimer(self.board_frame)
+
+
     def create_events(self):
         self.on_first_reveal_cell:MyEvent = MyEvent()
         self.on_reveal_cell:MyEvent = MyEvent()
@@ -50,17 +59,33 @@ class BoardManager:
         self.on_chord_release_cell:MyEvent = MyEvent()
         self.on_game_over:MyEvent = MyEvent()
         self.on_complete:MyEvent = MyEvent()
-    
+        # 當第一次揭開格子時, 啟動計時器
+        self.on_first_reveal_cell.subscribe(lambda r,c,seed: self.start_timer())
+        # 遊戲結束或重置時, 停止並重置計時器
+        self.on_game_over.subscribe(lambda msg: self.stop_timer())
+        self.on_complete.subscribe(lambda msg: self.stop_timer())
+
     def create_ui(self):
         """創建 UI"""
-        self.board_frame = Frame(self.parent_frame)
-        self.board_frame.pack(side=LEFT, padx=10)        
+        
+        # 顯示計時 Label
+        self.timer_label = Label(self.board_frame, textvariable=self.countup_timer.countdown_var, font=(None, 12))
+        self.timer_label.pack(pady=(0,5))
+        
         # 遊戲板按鈕
         self.buttons_frame = LabelFrame(self.board_frame, text=self.name)
         self.buttons_frame.pack()
         
         self.change_difficulty(DifficultyConfig(Difficulty.EASY))
     
+    def start_timer(self):
+        self.is_game_started = True
+        self.countup_timer.reset()
+        self.countup_timer.start_countdown()
+
+    def stop_timer(self):
+        self.countup_timer.stop_countdown()
+
     def reset(self):
         """重置遊戲板"""
         self.is_ready = False
@@ -69,6 +94,8 @@ class BoardManager:
         self.first_click = True
         self.gameBoard.reset()
         self.update_board()
+        # 重置計時器顯示
+        self.countup_timer.reset()
     
     def flood_fill(self, r, c):
         """塌陷"""
@@ -99,8 +126,8 @@ class BoardManager:
         # 旗標不會被展開
         cell = self.gameBoard.get_cell(r, c)
         
-        if not cell.revealed and cell.flagged:
-            return
+        if cell.revealed or cell.flagged:
+            return 
         
         # 第一次按下的時候, 才擺放地雷
         if self.first_click:
@@ -225,6 +252,7 @@ class BoardManager:
                     
         self.is_game_over = True
         msg = f"恭喜,{self.name}贏了!"
+        self.complete()
         self.on_complete.emit(msg)
     
     def reveal_all_mines(self):
@@ -262,6 +290,10 @@ class BoardManager:
                     else:
                         img = self.tile_images["TileUnknown"]
                 btn.config(image=img)
+    
+    def complete(self):
+        self.is_game_over = True
+        print("COMPLETE")
     
     def change_difficulty(self, config: DifficultyConfig):
         """更改難度"""

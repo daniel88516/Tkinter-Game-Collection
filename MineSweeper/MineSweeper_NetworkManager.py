@@ -197,11 +197,12 @@ class NetworkManager:
             msg = self.send_queue.get()
             if self.client_socket and self.connection_status:
                 try: 
-                    self.client_socket.send(msg.encode('utf-8'))
+                    self.client_socket.send((msg+"\n").encode('utf-8'))
                     print(f"NetworkManager: 傳送訊息: {msg}")
                 except Exception as e:
                     print(f"Network Manager: 傳送訊息失敗 {e}")
-                self.send_queue.task_done()
+                finally:
+                    self.send_queue.task_done()
                 
     def send_game_message(self, message:GameMessage):
         """傳送遊戲訊息"""
@@ -223,21 +224,49 @@ class NetworkManager:
         except Exception as e:
             print(f"NetworkManager: 放入訊息失敗: {str(e)}")
             
+    # def receive_message(self):
+    #     """接收訊息"""
+    #     while self.connection_status:
+    #         try:
+    #             message = self.client_socket.recv(1024).decode('utf-8')
+    #             if not message:
+    #                 break
+    #             try:
+    #                 game_message = GameMessage.from_json(message)
+    #                 print(f"NetworkManager: 收到遊戲訊息: {game_message}")
+    #                 self.recv_queue.put(game_message)
+    #             except json.JSONDecodeError:
+    #                 self.recv_queue.put(message)
+    #         except Exception as e:
+    #             # 遠端主機強制關閉現存的連線
+    #             self.receive_message_failed(e)
+    #             print(f"NetworkManager: 接收訊息失敗: {str(e)}")
+    #             break
+    #     if self.is_server_running == False:
+    #         self.stop_server()
+    #         print("NetworkManager: 伺服器關閉")
+    #     else:
+    #         self.disconnect()
+    #         print("NetworkManager: 客戶端斷線")
     def receive_message(self):
-        """接收訊息"""
+        buffer = ""
         while self.connection_status:
             try:
-                message = self.client_socket.recv(1024).decode('utf-8')
-                if not message:
+                data = self.client_socket.recv(1024).decode('utf-8')
+                if not data:
                     break
-                try:
-                    game_message = GameMessage.from_json(message)
-                    print(f"NetworkManager: 收到遊戲訊息: {game_message}")
-                    self.recv_queue.put(game_message)
-                except json.JSONDecodeError:
-                    self.recv_queue.put(message)
+                buffer += data
+                while '\n' in buffer:
+                    msg, buffer = buffer.split('\n', 1)
+                    if not msg:
+                        continue
+                    try:
+                        game_message = GameMessage.from_json(msg)
+                        print(f"NetworkManager: 收到遊戲訊息: {game_message}")
+                        self.recv_queue.put(game_message)
+                    except json.JSONDecodeError:
+                        self.recv_queue.put(msg)
             except Exception as e:
-                # 遠端主機強制關閉現存的連線
                 self.receive_message_failed(e)
                 print(f"NetworkManager: 接收訊息失敗: {str(e)}")
                 break
@@ -247,6 +276,7 @@ class NetworkManager:
         else:
             self.disconnect()
             print("NetworkManager: 客戶端斷線")
+
 
     """UI"""
     def on_start_server_success(self, ip:str, port:int):

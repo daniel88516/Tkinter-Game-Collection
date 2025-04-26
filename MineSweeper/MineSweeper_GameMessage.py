@@ -12,6 +12,7 @@ class GameMessageType(Enum):
     CHORD_PRESS = auto()
     CHORD_RELEASE = auto()
     GAME_OVER = auto()
+    GAME_COMPLETE = auto()
     RESET = auto()
     CHANGE_DIFFICULTY = auto()
 
@@ -27,7 +28,7 @@ class GameMessage:
             data["difficulty"] = data["difficulty"].name
         return json.dumps({
             "type": self.type.name,
-            "data": self.data
+            "data": data
         })
     
     @staticmethod
