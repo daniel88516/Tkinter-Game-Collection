@@ -262,7 +262,7 @@ class BoardManager:
         self.gameBoard = GameBoard(config, self.name)
         self.buttons = []
         self.buttons_frame.destroy()
-        self.buttons_frame = Frame(self.board_frame)
+        self.buttons_frame = LabelFrame(self.board_frame, text=self.name)
         self.buttons_frame.pack()
         
         for r in range(self.gameBoard.height):

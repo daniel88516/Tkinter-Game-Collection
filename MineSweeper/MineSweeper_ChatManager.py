@@ -15,20 +15,26 @@ class ChatManager:
     def create_widget(self, parent_frame:Frame):
         self.parent_frame = parent_frame
 
-        # 聊天紀錄區：讓它垂直也能 expand
+        # 聊天區整體容器
         chat_input_frame = LabelFrame(self.parent_frame, text="聊天室")
         chat_input_frame.pack(
             padx=10,
             pady=10,
             fill="both",
-            expand=True,
-            side=LEFT,
+            expand=True
+        )
+
+        # 用一個中間 frame 承載 Canvas 和 Scrollbar
+        display_frame = Frame(chat_input_frame)
+        display_frame.pack(
+            fill="both",
+            expand=True
         )
 
         # Canvas + Scrollbar
-        self.canvas = Canvas(chat_input_frame, width=130, height=130)
+        self.canvas = Canvas(display_frame, width=130, height=130)
         scrollbar = Scrollbar(
-            chat_input_frame,
+            display_frame,
             orient=VERTICAL,
             command=self.canvas.yview
         )
@@ -38,9 +44,8 @@ class ChatManager:
         )
         self.canvas.configure(yscrollcommand=scrollbar.set)
 
-        # 放訊息的 Frame，並指定 anchor="nw"
+        # 訊息承載 frame
         self.messages_frame = Frame(self.canvas)
-        # 建立 window 並保留 id
         self._messages_window = self.canvas.create_window(
             (0, 0),
             window=self.messages_frame,
@@ -48,11 +53,12 @@ class ChatManager:
         )
 
         self.canvas.pack(
+            side=LEFT,
             fill="both",
             expand=True
         )
 
-        # 當 inner frame 大小改變時，更新 scrollregion
+        # 更新 scrollregion
         self.messages_frame.bind(
             "<Configure>",
             lambda e:
@@ -60,8 +66,7 @@ class ChatManager:
                 scrollregion=self.canvas.bbox("all")
             )
         )
-
-        # 綁定 Canvas 大小變化，讓內部 window 寬度同步
+        # 同步寬度
         self.canvas.bind(
             "<Configure>",
             lambda e:
@@ -86,7 +91,7 @@ class ChatManager:
             lambda e: self.canvas.yview_scroll(1, "units")
         )
 
-        # 輸入區塊
+        # 輸入區塊，放在 display_frame 之下
         bottom_frame = Frame(chat_input_frame)
         bottom_frame.pack(
             side="bottom",
@@ -135,19 +140,16 @@ class ChatManager:
 
         # 依 from_self 決定 side
         label.pack(
-            side=LEFT if from_self else RIGHT,
+            side=RIGHT if from_self else LEFT,
             padx=10
         )
-
         # 新增完訊息就滑到底
-        self.canvas.yview_moveto(1.0)
+        self.canvas.after(100, lambda:self.canvas.yview_moveto(1.0))
 
     def send_message(self):
         msg = self.entry.get().strip()
         if not msg:
             return
-
-        # 範例：加入多則訊息
         self.add_message(msg, from_self=True)
         self.entry.delete(0, "end")
         self.on_send_message.emit(msg)

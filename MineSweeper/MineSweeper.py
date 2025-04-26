@@ -9,13 +9,10 @@ from MineSweeper_ChatManager import ChatManager
 class MineSweeper:
     """主遊戲類"""
     def __init__(self, window:Tk):
-        self.window:Tk = window
+        self.window = window
         self.container = Frame(self.window)
-        self.container.place(      
-            relx=0.5,    # 水平中心點在父視窗 50% 位置  
-            rely=0.5,    # 垂直中心點在父視窗 50% 位置  
-            anchor="center"  
-        )
+        self.container.pack(fill="both", expand=True)
+        
         self.load_images()
         self.create_variable()
         
@@ -71,7 +68,7 @@ class MineSweeper:
         self.player_board = BoardManager(
             self.boards_container,
             self.tile_images,
-            "玩家遊戲板",
+            "你",
             self.config,
             self.debug_mode,
             False
@@ -80,7 +77,7 @@ class MineSweeper:
         self.opponent_board = BoardManager(
             self.boards_container,
             self.tile_images,
-            "對手遊戲板",
+            "你的對手",
             self.config,
             self.debug_mode,
             True
@@ -100,7 +97,7 @@ class MineSweeper:
    
     def create_network_eventHandler(self):
         # server events, 開關, 連線, 斷線
-        self.network_manager.server_connect_success.subscribe(self.on_networkManager_server_connect_success)
+        self.network_manager.on_server_connect_success.subscribe(self.on_networkManager_server_connect_success)
         
         # 接收訊息
         self.network_manager.on_receive_message_failed.subscribe(self.on_networkManager_receive_message_failed) 
@@ -158,8 +155,8 @@ class MineSweeper:
 
         # 計算視窗大小
         board_width = self.config.board_width * 32
-        total_width = board_width * len(self.board_managers) + 80 + (20 * (len(self.board_managers) - 1))
-        height = self.config.board_height * 32 + 300
+        total_width = board_width * len(self.board_managers) + 160 + (20 * (len(self.board_managers) - 1))
+        height = self.config.board_height * 32 + 350
         
         screen_width = self.window.winfo_screenwidth()
         screen_height = self.window.winfo_screenheight()

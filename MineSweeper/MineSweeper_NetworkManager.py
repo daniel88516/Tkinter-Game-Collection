@@ -14,7 +14,7 @@ class NetworkManager:
         threading.Thread(target=self._send_loop, daemon=True).start()
         
     def create_events(self):
-        self.server_connect_success:MyEvent = MyEvent()        
+        self.on_server_connect_success:MyEvent = MyEvent()        
         # 接收訊息
         self.on_receive_message_success:MyEvent = MyEvent()
         self.on_receive_message_failed:MyEvent = MyEvent()
@@ -30,10 +30,9 @@ class NetworkManager:
         
         self.client_ip_var:StringVar = StringVar(value=self.get_local_ip())
         self.client_port_var:StringVar = StringVar(value="12345")
-
         
     def create_widget(self, parent_frame:Frame):
-        self.network_frame = Frame(parent_frame)
+        self.network_frame = parent_frame
         self.network_frame.pack(side=TOP)
         
         server_frame = LabelFrame(self.network_frame, text="伺服器設定")
