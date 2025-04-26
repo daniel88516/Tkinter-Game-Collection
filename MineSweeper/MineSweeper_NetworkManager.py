@@ -17,11 +17,10 @@ class NetworkManager:
         self.on_server_connect_success: MyEvent = MyEvent()   
         self.on_server_disconnect_success: MyEvent = MyEvent()
         self.on_client_connect_success: MyEvent = MyEvent()
-        self.on_client_disconnect_success: MyEvent = MyEvent()     
-        # 接收訊息
-        self.on_receive_message_success:MyEvent = MyEvent()
-        self.on_receive_message_failed:MyEvent = MyEvent()
-        
+        self.on_client_disconnect_success: MyEvent = MyEvent() 
+        self.on_receive_message_failed: MyEvent = MyEvent() 
+        # 訊息使用 polling 讀取   
+                
     def create_variable(self):
         self.server_socket = None
         self.client_socket = None
@@ -134,6 +133,8 @@ class NetworkManager:
             self.connection_status = False
             print("NetworkManager: 伺服器關閉")
             self.close_server_success()
+            self.client_disconnect_success()
+            self.on_server_disconnect_success.emit()
     
         except Exception as e:
             print("NetworkManager: 伺服器關閉失敗" + str(e))
@@ -237,7 +238,7 @@ class NetworkManager:
                     self.recv_queue.put(message)
             except Exception as e:
                 # 遠端主機強制關閉現存的連線
-                self.on_receive_message_failed(e)
+                self.receive_message_failed(e)
                 print(f"NetworkManager: 接收訊息失敗: {str(e)}")
                 break
         if self.is_server_running == False:
@@ -266,7 +267,6 @@ class NetworkManager:
     def close_server_success(self):
         self.start_server_btn.config(text="開啟伺服器")
         self.server_status.config(text="[伺服器狀態] 已關閉", fg="black")
-
         self.connect_btn.config(state="active")
 
     def close_server_failed(self, e):
@@ -302,7 +302,6 @@ class NetworkManager:
             fg="red"
         )
         print(f"[錯誤] 伺服器斷線失敗: {str(e)}")
-
     def client_connect_success(self, ip:str, port:int, client_ip:str, client_port:int):
         self.connect_btn.config(text="斷開連接")
         self.server_status.config(
@@ -331,3 +330,10 @@ class NetworkManager:
             fg="red"
         )
         print(f"[錯誤] 客戶端斷線失敗: {str(e)}")
+
+    def receive_message_failed(self, e):
+        if self.is_server_running: 
+            self.client_status.config(fg="red", text=f"斷開連線{str(e)}")
+        else:
+            self.server_status.config(fg="red", text=f"斷開連線{str(e)}")
+        self.on_receive_message_failed.emit()

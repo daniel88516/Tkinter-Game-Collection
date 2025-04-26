@@ -7,7 +7,7 @@ class ChatManager:
         self.create_events()
 
     def create_variable(self):
-        self.entry_var:StringVar = StringVar(value="A")
+        self.entry_var:StringVar = StringVar()
 
     def create_events(self):
         self.on_send_message:MyEvent = MyEvent()
@@ -108,12 +108,13 @@ class ChatManager:
             padx=(0,5)
         )
 
-        send_btn = Button(
+        self.send_btn = Button(
             bottom_frame,
             text="傳送",
-            command=self.send_message
+            command=self.send_message,
+            state="disabled"
         )
-        send_btn.pack(
+        self.send_btn.pack(
             side="left"
         )
 

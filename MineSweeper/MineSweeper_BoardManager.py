@@ -88,11 +88,6 @@ class BoardManager:
     
     @operation_check
     def on_reveal(self, r:int, c:int, seed=None):
-        # if self.is_ready:
-        #     print("你準備好了")
-        # else: 
-        #     print("你還沒準備好")
-        #     return
         """你按下了左鍵"""
         if seed is None: 
             seed = int.from_bytes(os.urandom(4), byteorder='big')

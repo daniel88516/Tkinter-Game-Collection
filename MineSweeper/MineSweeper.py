@@ -1,4 +1,4 @@
-from tkinter import *
+from tkinter import * 
 from tkinter import messagebox
 import os
 from MineSweeper_Difficulty import DifficultyConfig, Difficulty
@@ -127,18 +127,22 @@ class MineSweeper:
         difficulty_frame = Frame(control_frame)
         difficulty_frame.pack(side=TOP, pady=5)
         
+        self.difficulty_buttons:list[Button] = []
         for diff in Difficulty: 
-            Button(
+            btn = Button(
                 difficulty_frame,
                 text=DifficultyConfig.CONFIGS[diff]["name"],
-                command=lambda d=diff: [self.change_difficulty(d), self.send_change_difficulty_message(d)]
-            ).pack(side=LEFT, padx=5)
+                command=lambda d=diff: [self.change_difficulty(d), self.send_change_difficulty_message(d)],
+                state=DISABLED
+            )
+            btn.pack(side=LEFT, padx=5)
+            self.difficulty_buttons.append(btn)
         
-        self.ready_button = Button(control_frame, text="未準備", command=self.toggle_ready_state, fg="red", state=DISABLED)
+        self.ready_button = Button(control_frame, fg="red", text="未準備", command=self.toggle_ready_state, state=DISABLED)
         self.ready_button.pack(side=LEFT, padx=5)
         
-        reset_button = Button(control_frame, text="重置遊戲", command= lambda: [self.new_game(), self.send_reset_message()] )
-        reset_button.pack(side=LEFT, padx=5)
+        self.reset_button = Button(control_frame, text="重置遊戲", command= lambda: [self.new_game(), self.send_reset_message()], state=DISABLED)
+        self.reset_button.pack(side=LEFT, padx=5)
         
         self.debug_button = Button(control_frame, text="Debug 模式：關閉", command=self.toggle_debug_mode)
         self.debug_button.pack(side=LEFT, padx=5)
@@ -163,7 +167,7 @@ class MineSweeper:
         # 計算視窗大小
         board_width = self.config.board_width * 32
         total_width = board_width * len(self.board_managers) + 160 + (20 * (len(self.board_managers) - 1))
-        height = self.config.board_height * 32 + 350
+        height = self.config.board_height * 32 + 400
         
         screen_width = self.window.winfo_screenwidth()
         screen_height = self.window.winfo_screenheight()
@@ -172,13 +176,20 @@ class MineSweeper:
         self.window.geometry(f"{total_width}x{height}+{x}+{y}")
         # topmost 
         self.window.attributes("-topmost", True)
-    
-    def toggle_ready_state(self):
+        
+    def toggle_ready_state(self, targetState:bool=None):
         self.player_board.is_ready = not self.player_board.is_ready
         if self.player_board.is_ready:
-            self.ready_button.config(fg="green", text="已準備") 
+            self.ready_button.config(fg="green", text="已準備")
+            self.reset_button.config(state=DISABLED)
+            for btn in self.difficulty_buttons:
+                btn.config(state=DISABLED)
         else: 
             self.ready_button.config(fg="red", text="未準備")
+            self.reset_button.config(state=ACTIVE)
+            for btn in self.difficulty_buttons:
+                btn.config(state=ACTIVE)
+
         
         message:GameMessage = GameMessage(
             type=GameMessageType.READY_STATE,
@@ -207,6 +218,9 @@ class MineSweeper:
         """開始新遊戲"""
         for board_manager in self.board_managers:
             board_manager.reset()
+        
+        self.ready_button.config(text="未準備", fg="red")
+            
     def send_reset_message(self):
         """傳送重置的訊息"""
         # 不能放到 new_game 當中, 因為會彼此傳來傳去
@@ -224,13 +238,13 @@ class MineSweeper:
         else: 
             # 難度不變,但需要清空場地
             self.new_game()
-            self.send_reset_message()
-            
+            self.send_reset_message() 
     def send_change_difficulty_message(self, difficulty: Difficulty):
         message:GameMessage = GameMessage(GameMessageType.CHANGE_DIFFICULTY, data={"difficulty":difficulty.name})
         self.network_manager.send_game_message(message)        
     
     def _poll_incoming_message(self):
+        """使用 thread, after, 每 0.1 秒就處理累積下來的請求"""
         while not self.network_manager.recv_queue.empty():
             msg = self.network_manager.recv_queue.get()
             self.resolve_message(msg)
@@ -247,22 +261,33 @@ class MineSweeper:
             handler(self, message)
         else: 
             print("沒有找到訊息的對應處理方法")
+            
     def on_networkManager_server_connect_success(self):
         self.change_difficulty(Difficulty.EASY)
         self.send_change_difficulty_message(Difficulty.EASY)
-        self.ready_button.config(state=ACTIVE)
-
-    def on_networkManager_server_disconnect_success(self):
-        self.ready_button.config(state=DISABLED)
+        self.config_control_panel_buttons(ACTIVE)
         
+    def on_networkManager_server_disconnect_success(self):
+        self.new_game()
+        self.config_control_panel_buttons(DISABLED)
+                
     def on_networkManager_client_connect_success(self):
-        self.ready_button.config(state=ACTIVE)
+        self.config_control_panel_buttons(ACTIVE)
         
     def on_networkManager_client_disconnect_success(self):
-        self.ready_button.config(state=ACTIVE)
+        self.new_game()
+        self.config_control_panel_buttons(DISABLED)
         
-    def on_networkManager_receive_message_failed(self, e):
-        messagebox.showerror("斷開連線", f"{str(e)}")
+    def on_networkManager_receive_message_failed(self):
+        self.new_game()
+        self.config_control_panel_buttons(DISABLED)
+    
+    def config_control_panel_buttons(self, state):
+        self.ready_button.config(state=state)
+        self.chat_manager.send_btn.config(state=state)
+        self.reset_button.config(state=state)
+        for btn in self.difficulty_buttons:
+            btn.config(state=state)
         
     def on_player_first_reveal_cell(self, r:int, c:int, seed:int):
         message:GameMessage = GameMessage(
