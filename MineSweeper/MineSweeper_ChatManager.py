@@ -1,42 +1,89 @@
-from tkinter import * 
+from tkinter import *
+from MineSweeper_Event import MyEvent
+
 class ChatManager:
-    def __init__(self, window):
-        self.window = window
-        self.create_widget()
-        
-    def start(self):
-        self.window.mainloop()
-    
-    def create_widget(self):
-        #── 聊天記錄區（可捲動）──
-        chat_input_frame = LabelFrame(self.window, text="聊天室")
-        chat_input_frame.pack(padx=10, pady=10, fill="x")
-        canvas = Canvas(chat_input_frame)
+    def __init__(self):
+        self.create_variable()
+        self.create_events()
+
+    def create_variable(self):
+        self.entry_var:StringVar = StringVar(value="A")
+
+    def create_events(self):
+        self.on_send_message:MyEvent = MyEvent()
+
+    def create_widget(self, parent_frame:Frame):
+        self.parent_frame = parent_frame
+
+        # 聊天紀錄區：讓它垂直也能 expand
+        chat_input_frame = LabelFrame(self.parent_frame, text="聊天室")
+        chat_input_frame.pack(
+            padx=10,
+            pady=10,
+            fill="both",
+            expand=True,
+            side=LEFT,
+        )
+
+        # Canvas + Scrollbar
+        self.canvas = Canvas(chat_input_frame, width=130, height=130)
         scrollbar = Scrollbar(
             chat_input_frame,
-            orient="vertical",
-            command=canvas.yview
+            orient=VERTICAL,
+            command=self.canvas.yview
         )
-        scrollbar.pack(side=RIGHT, fill=Y)
-        canvas.configure(yscrollcommand=scrollbar.set)
+        scrollbar.pack(
+            side=RIGHT,
+            fill=Y
+        )
+        self.canvas.configure(yscrollcommand=scrollbar.set)
 
-        
-        frame_messages = Frame(canvas)
-        canvas.create_window(
+        # 放訊息的 Frame，並指定 anchor="nw"
+        self.messages_frame = Frame(self.canvas)
+        # 建立 window 並保留 id
+        self._messages_window = self.canvas.create_window(
             (0, 0),
-            window=frame_messages,
+            window=self.messages_frame,
             anchor="nw"
         )
-        canvas.pack(
+
+        self.canvas.pack(
             fill="both",
             expand=True
         )
 
-        frame_messages.bind(
+        # 當 inner frame 大小改變時，更新 scrollregion
+        self.messages_frame.bind(
             "<Configure>",
-            lambda e: canvas.configure(
-                scrollregion=canvas.bbox("all")
+            lambda e:
+            self.canvas.configure(
+                scrollregion=self.canvas.bbox("all")
             )
+        )
+
+        # 綁定 Canvas 大小變化，讓內部 window 寬度同步
+        self.canvas.bind(
+            "<Configure>",
+            lambda e:
+            self.canvas.itemconfig(
+                self._messages_window,
+                width=e.width
+            )
+        )
+
+        # 滑鼠滾輪
+        self.canvas.bind_all(
+            "<MouseWheel>",
+            lambda e:
+            self.canvas.yview_scroll(int(-1 * (e.delta / 120)), "units")
+        )
+        self.canvas.bind_all(
+            "<Button-4>",
+            lambda e: self.canvas.yview_scroll(-1, "units")
+        )
+        self.canvas.bind_all(
+            "<Button-5>",
+            lambda e: self.canvas.yview_scroll(1, "units")
         )
 
         # 輸入區塊
@@ -48,7 +95,7 @@ class ChatManager:
             pady=5
         )
 
-        self.entry = Entry(bottom_frame)
+        self.entry = Entry(bottom_frame, textvariable=self.entry_var)
         self.entry.pack(
             side="left",
             fill="x",
@@ -59,44 +106,54 @@ class ChatManager:
         send_btn = Button(
             bottom_frame,
             text="傳送",
-            command=self.on_send
+            command=self.send_message
         )
-        send_btn.pack(side="left")
+        send_btn.pack(
+            side="left"
+        )
 
     def add_message(self, text, from_self):
+        # 一定要讓 message_frame 填滿寬度
+        message_frame = Frame(self.messages_frame)
+        message_frame.pack(
+            side="top",
+            fill="x",      # 撐滿整行
+            pady=2
+        )
+
         label = Label(
-            self.frame_messages,
+            message_frame,
             text=text,
             wraplength=200,
-            justify="left"
+            justify=LEFT,
+            bg="#95EC69" if from_self else "#DDDDDD",
+            padx=10,
+            pady=5,
+            relief="solid",
+            borderwidth=1
         )
-        if from_self:
-            label.pack(
-                anchor="e",
-                pady=2,
-                padx=10
-            )
-        else:
-            label.pack(
-                anchor="w",
-                pady=2,
-                padx=10
-            )
-        # 每次加入訊息後，滾到最底
+
+        # 依 from_self 決定 side
+        label.pack(
+            side=LEFT if from_self else RIGHT,
+            padx=10
+        )
+
+        # 新增完訊息就滑到底
         self.canvas.yview_moveto(1.0)
 
-    def on_send(self):
-        txt = self.entry.get().strip()
-        if not txt:
+    def send_message(self):
+        msg = self.entry.get().strip()
+        if not msg:
             return
-        self.add_message(txt, from_self=True)
+
+        # 範例：加入多則訊息
+        self.add_message(msg, from_self=True)
         self.entry.delete(0, "end")
+        self.on_send_message.emit(msg)
 
-        # 這裡呼叫你的 network_manager.send_message(...)
-        # 並在收到對方訊息時，呼叫：
-        #   self.add_message(對方傳來的文字, from_self=False)
-
-if __name__ == "__main__":
-    root = Tk()
-    chat = ChatManager(root)
-    root.mainloop()
+if __name__=="__main__":
+    window:Tk = Tk()
+    chat_manager = ChatManager()
+    chat_manager.create_widget(window)
+    window.mainloop()

@@ -1,4 +1,4 @@
-import socket, threading, json, queue, time
+import socket, threading, json, queue
 from MineSweeper_Event import MyEvent
 from MineSweeper_GameMessage import GameMessage
 from tkinter import * 
@@ -14,22 +14,7 @@ class NetworkManager:
         threading.Thread(target=self._send_loop, daemon=True).start()
         
     def create_events(self):
-        # server events, 開關, 連線, 斷線
-        self.on_start_server_success:MyEvent = MyEvent()
-        self.on_start_server_failed:MyEvent = MyEvent()
-        self.on_close_server_success:MyEvent = MyEvent()
-        self.on_close_server_failed:MyEvent = MyEvent()
-        self.on_server_connect_success:MyEvent = MyEvent()
-        self.on_server_connect_failed:MyEvent = MyEvent()
-        self.on_server_disconnect_success:MyEvent = MyEvent()
-        self.on_server_disconnect_failed:MyEvent = MyEvent()
-        
-        # client events, 連線, 斷線
-        self.on_client_connect_success:MyEvent = MyEvent()
-        self.on_client_connect_failed:MyEvent = MyEvent()
-        self.on_client_disconnect_success:MyEvent = MyEvent()
-        self.on_client_disconnect_failed:MyEvent = MyEvent()      
-        
+        self.server_connect_success:MyEvent = MyEvent()        
         # 接收訊息
         self.on_receive_message_success:MyEvent = MyEvent()
         self.on_receive_message_failed:MyEvent = MyEvent()
@@ -39,7 +24,67 @@ class NetworkManager:
         self.client_socket = None
         self.is_server_running = False
         self.connection_status = False
+
+        self.server_ip_var:StringVar = StringVar(value=self.get_local_ip())
+        self.server_port_var:StringVar = StringVar(value="12345")
         
+        self.client_ip_var:StringVar = StringVar(value=self.get_local_ip())
+        self.client_port_var:StringVar = StringVar(value="12345")
+
+        
+    def create_widget(self, parent_frame:Frame):
+        self.network_frame = Frame(parent_frame)
+        self.network_frame.pack(side=TOP)
+        
+        server_frame = LabelFrame(self.network_frame, text="伺服器設定")
+        server_frame.pack(padx=10, fill="x", side=LEFT)
+        
+        Label(server_frame, text="IP:").grid(row=0, column=0)
+        self.server_ip_entry = Entry(server_frame, textvariable=self.server_ip_var)
+        self.server_ip_entry.grid(row=0, column=1, padx=5)
+
+        Label(server_frame, text="Port:").grid(row=1, column=0)
+        self.server_port_entry = Entry(server_frame, textvariable=self.server_port_var)
+        self.server_port_entry.grid(row=1, column=1, padx=5)
+        
+        self.start_server_btn = Button(
+            server_frame,
+            text="開啟伺服器",
+            command=lambda :self.toggle_server(self.server_ip_var.get(), int(self.server_port_var.get()))
+        )
+        self.start_server_btn.grid(row=2, columnspan=2, padx=5)
+
+        self.server_status = Label(
+            server_frame, 
+            text="[伺服器狀態] 未啟動"
+        )
+        self.server_status.grid(row=4, columnspan=2)
+
+        # 客戶端區塊
+        client_frame = LabelFrame(self.network_frame, text="客戶端設定")
+        client_frame.pack(padx=10, fill="x", side=LEFT)
+
+        Label(client_frame, text="目標IP:").grid(row=0, column=0)
+        self.client_ip_entry = Entry(client_frame, textvariable=self.client_ip_var)
+        self.client_ip_entry.grid(row=0, column=1, padx=5)
+
+        Label(client_frame, text="目標Port:").grid(row=1, column=0)
+        self.client_port_entry = Entry(client_frame, textvariable=self.client_port_var)
+        self.client_port_entry.grid(row=1, column=1, padx=5)
+        
+        self.connect_btn = Button(
+            client_frame,
+            text="連接伺服器",
+            command=lambda :self.toggle_connection(self.client_ip_var.get(), int(self.client_port_var.get()))
+        )
+        self.connect_btn.grid(row=3, columnspan=2, padx=5)
+
+        self.client_status = Label(
+            client_frame,
+            text="[連線狀態] 未連接"
+        )
+        self.client_status.grid(row=4, columnspan=2, padx=5)
+
     def get_local_ip(self):
         try:
             # 建立一個 UDP socket
@@ -69,10 +114,10 @@ class NetworkManager:
             server_thread = threading.Thread(target=self.listen_clients, daemon=True)
             server_thread.start()
             print(f"NetworkManager: 伺服器啟動成功, {ip}:{port}")
-            self.on_start_server_success.emit(ip, port)
+            self.on_start_server_success(ip, port)
         except Exception as e:
             print(f"NetworkManager: 伺服器啟動失敗: {str(e)}")
-            self.on_start_server_failed.emit(e)
+            self.start_server_failed(e)
             return False
         
     def stop_server(self):
@@ -86,11 +131,11 @@ class NetworkManager:
             self.is_server_running = False
             self.connection_status = False
             print("NetworkManager: 伺服器關閉")
-            self.on_close_server_success.emit()
+            self.close_server_success()
     
         except Exception as e:
             print("NetworkManager: 伺服器關閉失敗" + str(e))
-            self.on_close_server_failed.emit(e)
+            self.close_server_failed(e)
         
     def listen_clients(self):
         while self.is_server_running:
@@ -101,13 +146,13 @@ class NetworkManager:
                 self.receive_thread = threading.Thread(target=self.receive_message, daemon=True)
                 self.receive_thread.start()
                 print(f"NetworkManager: 連上了客戶端, {addr}")   
-                self.on_server_connect_success.emit(addr)
+                self.server_connect_success(addr)
             # winerror 10038: socket operation on non-socket
             except OSError as e:
                 pass
             except Exception as e:
                 print("NetworkManager: 傾聽客戶端失敗" + str(e))
-                self.on_server_connect_failed.emit(e)
+                self.server_connect_failed(e)
                 return False
 
     def toggle_connection(self, ip:str, port:int):
@@ -117,7 +162,7 @@ class NetworkManager:
             else:
                 self.disconnect()
         except ValueError as e:
-            self.on_error.emit(e)
+            self.on_error(e)
 
     def connect_to_server(self, ip:str, port:int):
         try:
@@ -126,23 +171,23 @@ class NetworkManager:
             self.client_socket.connect((ip, port))
             print(f"NetworkManager: 客戶端連線成功")
             client_ip, client_port = self.client_socket.getsockname()
-            self.on_client_connect_success.emit(ip, port, client_ip, client_port)
+            self.client_connect_success(ip, port, client_ip, client_port)
             
             self.receive_thread = threading.Thread(target=self.receive_message, daemon=True)
             self.receive_thread.start()
         except Exception as e:
             print(f"NetworkManager: 客戶端連線失敗: {str(e)}")
-            self.on_client_connect_failed.emit(e)
+            self.client_connect_failed(e)
 
     def disconnect(self):
         try:
             self.client_socket.close()
             self.connection_status = False
             print(f"NetworkManager: 客戶端斷線成功")
-            self.on_client_disconnect_success.emit()
+            self.client_disconnect_success()
         except Exception as e:
             print(f"NetworkManager: 客戶端斷線失敗: {str(e)}")
-            self.on_client_disconnect_failed.emit(e)
+            self.client_disconnect_failed(e)
 
     def _send_loop(self):
         while True:
@@ -186,13 +231,11 @@ class NetworkManager:
                     game_message = GameMessage.from_json(message)
                     print(f"NetworkManager: 收到遊戲訊息: {game_message}")
                     self.recv_queue.put(game_message)
-                    # self.on_receive_message_success.emit(game_message)
                 except json.JSONDecodeError:
                     self.recv_queue.put(message)
-                    # self.on_receive_message_success.emit(message)
             except Exception as e:
                 # 遠端主機強制關閉現存的連線
-                self.on_receive_message_failed.emit(e)
+                self.on_receive_message_failed(e)
                 print(f"NetworkManager: 接收訊息失敗: {str(e)}")
                 break
         if self.is_server_running == False:
@@ -202,18 +245,84 @@ class NetworkManager:
             self.disconnect()
             print("NetworkManager: 客戶端斷線")
 
-    # def _handle_connection_loss(self):
-    #     """連線不見的統一處理"""
-    #     if self.is_server_running:
-    #         # server 模式只關閉 client socket
-    #         self._safe_close(self.client_socket)
-    #         self.client_socket = None
-    #         self.connection_status = False
-    #         print("NetworkManager: 客戶端斷線")
-    #         self.on_server_disconnect_success.emit()
-    #     else:
-    #         # 客戶端完全斷開
-    #         self.disconnect()
-if __name__ == "__main__":
-    app = NetworkManager()
-    app.start()
+    """UI"""
+    def on_start_server_success(self, ip:str, port:int):
+        self.start_server_btn.config(text="關閉伺服器")
+        self.server_status.config(
+            text=f"[伺服器狀態] 運行中 ({ip}:{port})", 
+            fg="green"
+        )
+        # disable client buttons
+        self.connect_btn.config(state="disabled")
+        
+    def start_server_failed(self, e):
+        self.server_status.config(
+            text=f"[錯誤] 伺服器啟動失敗: {str(e)}", 
+            fg="red"
+        )
+        
+    def close_server_success(self):
+        self.start_server_btn.config(text="開啟伺服器")
+        self.server_status.config(text="[伺服器狀態] 已關閉", fg="black")
+
+        self.connect_btn.config(state="active")
+
+    def close_server_failed(self, e):
+        self.server_status.config(
+            text=f"[錯誤] 伺服器關閉失敗: {str(e)}", 
+            fg="red"
+        )
+
+    def server_connect_success(self, addr):
+        self.client_status.config(
+            text=f"[連線狀態] 已連接 {addr[0]}:{addr[1]}", 
+            fg="green"
+        )
+        print(f"[連線狀態] 已連接 {addr[0]}:{addr[1]}")
+        self.on_server_connect_success.emit()
+    
+    def server_connect_failed(self, e):
+        self.client_status.config(
+            text=f"[錯誤] 伺服器連接失敗: {str(e)}", 
+            fg="red"
+        )
+        print(f"[錯誤] 伺服器連接失敗: {str(e)}")
+        
+    def client_connect_success(self, ip:str, port:int, client_ip:str, client_port:int):
+        self.connect_btn.config(text="斷開連接")
+        self.server_status.config(
+            text=f"[伺服器狀態] 已連接到 {ip}:{port}", 
+            fg="green"
+        )
+        self.client_status.config(text=f"[連線狀態] 已連接 {client_ip}:{client_port}", fg="green")
+        self.start_server_btn.config(state="disabled")
+
+    def server_disconnect_success(self):
+        self.client_status.config(text="[連線狀態] 已斷線", fg="red")
+        print("[連線狀態] 已斷線")
+        self.start_server_btn.config(state="active")
+    
+    def server_disconnect_failed(self, e):
+        self.client_status.config(
+            text=f"[錯誤] 伺服器斷線失敗: {str(e)}", 
+            fg="red"
+        )
+        print(f"[錯誤] 伺服器斷線失敗: {str(e)}")
+
+    def client_connect_failed(self, e):
+        self.client_status.config(
+            text=f"[錯誤] 連接失敗: {str(e)}", 
+            fg="red"
+        )
+
+    def client_disconnect_success(self):
+        self.connect_btn.config(text="連接伺服器")
+        self.client_status.config(text="[連線狀態] 已斷線", fg="red")
+        print("客戶端斷掉了")
+
+    def client_disconnect_failed(self, e):
+        self.client_status.config(
+            text=f"[錯誤] 客戶端斷線失敗: {str(e)}", 
+            fg="red"
+        )
+        print(f"[錯誤] 客戶端斷線失敗: {str(e)}")

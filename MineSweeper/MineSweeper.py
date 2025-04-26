@@ -5,24 +5,39 @@ from MineSweeper_Difficulty import DifficultyConfig, Difficulty
 from MineSweeper_BoardManager import BoardManager
 from MineSweeper_NetworkManager import NetworkManager
 from MineSweeper_GameMessage import GameMessage, GameMessageType
-# from MineSweeper_ChatManager import ChatManager
+from MineSweeper_ChatManager import ChatManager
 class MineSweeper:
     """主遊戲類"""
     def __init__(self, window:Tk):
+        self.window:Tk = window
+        self.container = Frame(self.window)
+        self.container.place(      
+            relx=0.5,    # 水平中心點在父視窗 50% 位置  
+            rely=0.5,    # 垂直中心點在父視窗 50% 位置  
+            anchor="center"  
+        )
         self.load_images()
         self.create_variable()
+        
         self.create_gameBoard()
         self.create_gameBoard_eventHandler()
+        
         self.create_network_panel()
         self.create_network_eventHandler()
+        
         self.create_control_panel()
+        
+        self.create_chat_panel()
+        self.create_chat_eventHandler()
+        
         self.center_window()
-
-        self.window.after(100, self._poll_incoming_message)
+        
+        # 處理網路傳訊
+        self.container.after(100, self._poll_incoming_message)
 
     def start(self):
         """啟動遊戲"""
-        self.window.mainloop()
+        self.container.mainloop()
         
     def load_images(self):
         """加載圖片"""
@@ -37,27 +52,20 @@ class MineSweeper:
         self.tile_images["TileMine"]     = PhotoImage(file=os.path.join(base_path, "TileMine.png"))
         
     def create_variable(self):
-        self.window:Tk = window
         self.debug_mode = BooleanVar(value=False)
         self.board_managers:list[BoardManager] = []
         self.config = DifficultyConfig(Difficulty.EASY)
         self.network_manager:NetworkManager = NetworkManager()
+        self.chat_manager:ChatManager = ChatManager()
         
-        self.server_ip_var:StringVar = StringVar(value=self.network_manager.get_local_ip())
-        self.server_port_var:StringVar = StringVar(value="12345")
-        
-        self.client_ip_var:StringVar = StringVar(value=self.network_manager.get_local_ip())
-        self.client_port_var:StringVar = StringVar(value="12345")
-
         self.message_var:StringVar = StringVar(value="")
-        self.client_message_var:StringVar = StringVar(value="")
          
     def create_gameBoard(self):
         """創建UI元素"""
-        self.frame = Frame(self.window)
-        self.frame.pack(padx=20, pady=20)
+        self.gameBoard_frame = Frame(self.container)
+        self.gameBoard_frame.pack(padx=20, pady=10)
         
-        self.boards_container = Frame(self.frame)
+        self.boards_container = Frame(self.gameBoard_frame)
         self.boards_container.pack()
         
         self.player_board = BoardManager(
@@ -92,23 +100,9 @@ class MineSweeper:
    
     def create_network_eventHandler(self):
         # server events, 開關, 連線, 斷線
-        self.network_manager.on_start_server_success.subscribe(self.on_networkManager_start_server_success)
-        self.network_manager.on_start_server_failed.subscribe(self.on_networkManager_start_server_failed)
-        self.network_manager.on_close_server_success.subscribe(self.on_networkManager_close_server_success)
-        self.network_manager.on_close_server_failed.subscribe(self.on_networkManager_close_server_failed)
-        self.network_manager.on_server_connect_success.subscribe(self.on_networkManager_server_connect_success)
-        self.network_manager.on_server_connect_failed.subscribe(self.on_networkManager_server_connect_failed)
-        self.network_manager.on_server_disconnect_success.subscribe(self.on_networkManager_server_disconnect_success)
-        self.network_manager.on_server_disconnect_failed.subscribe(self.on_networkManager_server_disconnect_failed)
-        
-        # client events, 連線, 斷線
-        self.network_manager.on_client_connect_success.subscribe(self.on_networkManager_client_connect_success)
-        self.network_manager.on_client_connect_failed.subscribe(self.on_networkManager_client_connect_failed)
-        self.network_manager.on_client_disconnect_success.subscribe(self.on_networkManager_client_disconnect_success)
-        self.network_manager.on_client_disconnect_failed.subscribe(self.on_networkManager_client_disconnect_failed)
+        self.network_manager.server_connect_success.subscribe(self.on_networkManager_server_connect_success)
         
         # 接收訊息
-        self.network_manager.on_receive_message_success.subscribe(self.on_networkManager_receive_message_success)
         self.network_manager.on_receive_message_failed.subscribe(self.on_networkManager_receive_message_failed) 
         
         self.message_handlers = {    
@@ -125,7 +119,7 @@ class MineSweeper:
    
     def create_control_panel(self):
         """控制面板"""
-        control_frame = Frame(self.frame)
+        control_frame = Frame(self.gameBoard_frame)
         control_frame.pack(pady=5)
         
         # 難度按鈕
@@ -146,73 +140,20 @@ class MineSweeper:
         self.debug_button.pack(side=LEFT, padx=5)
 
     def create_network_panel(self):
-        server_frame = LabelFrame(self.window, text="伺服器設定")
-        server_frame.pack(pady=10, padx=10, fill="x", side=LEFT)
-
-        Label(server_frame, text="IP:").grid(row=0, column=0)
-        self.server_ip_entry = Entry(server_frame, textvariable=self.server_ip_var)
-        self.server_ip_entry.grid(row=0, column=1, padx=5)
-
-        Label(server_frame, text="Port:").grid(row=1, column=0)
-        self.server_port_entry = Entry(server_frame, textvariable=self.server_port_var)
-        self.server_port_entry.grid(row=1, column=1, padx=5)
-        
-        self.start_server_btn = Button(
-            server_frame,
-            text="開啟伺服器",
-            command=lambda :self.network_manager.toggle_server(self.server_ip_var.get(), int(self.server_port_var.get()))
-        )
-        self.start_server_btn.grid(row=2, columnspan=2, padx=5)
-
-        self.server_status = Label(
-            server_frame, 
-            text="[伺服器狀態] 未啟動"
-        )
-        self.server_status.grid(row=4, columnspan=2)
-
-        # 客戶端區塊
-        client_frame = LabelFrame(self.window, text="客戶端設定")
-        client_frame.pack(pady=10, padx=10, fill="x", side=LEFT)
-
-        Label(client_frame, text="目標IP:").grid(row=0, column=0)
-        self.client_ip_entry = Entry(client_frame, textvariable=self.client_ip_var)
-        self.client_ip_entry.grid(row=0, column=1, padx=5)
-
-        Label(client_frame, text="目標Port:").grid(row=1, column=0)
-        self.client_port_entry = Entry(client_frame, textvariable=self.client_port_var)
-        self.client_port_entry.grid(row=1, column=1, padx=5)
-        
-        self.connect_btn = Button(
-            client_frame,
-            text="連接伺服器",
-            command=lambda :self.network_manager.toggle_connection(self.client_ip_var.get(), int(self.client_port_var.get()))
-        )
-        self.connect_btn.grid(row=3, columnspan=2, padx=5)
-
-        self.client_status = Label(
-            client_frame,
-            text="[連線狀態] 未連接"
-        )
-        self.client_status.grid(row=4, columnspan=2, padx=5)
-        
+        self.network_frame = Frame(self.container)
+        self.network_frame.pack()
+        self.network_manager.create_widget(self.network_frame)
+                
     def create_chat_panel(self):
         """聊天區域"""
-
-        # chat_input_frame = LabelFrame(self.window, text="聊天室").pack(padx=10, pady=10, fill="x", side=LEFT)
-        # canvas = Canvas(chat_input_frame)
-        # scrollbar = Scrollbar(
-        #     chat_input_frame
-        # )
-        # Entry(chat_input_frame, textvariable=self.message_var).pack(side=LEFT, padx=5)
-        # self.send_message_btn = Button(
-        #     chat_input_frame,
-        #     text="傳送",
-        #     command=lambda :self.network_manager.send_message(f"{self.message_var.get()}")
-        # )
-        # self.send_message_btn.pack(side=LEFT, padx=5)
+        self.chat_manager.create_widget(self.network_frame)
+        
+    def create_chat_eventHandler(self):
+        self.chat_manager.on_send_message.subscribe(self.on_chatManager_send_message)
         
     def center_window(self):
         """調整視窗大小和位置"""
+        
         self.window.update_idletasks()
 
         # 計算視窗大小
@@ -266,97 +207,16 @@ class MineSweeper:
         message:GameMessage = GameMessage(GameMessageType.CHANGE_DIFFICULTY, data={"difficulty":difficulty.name})
         self.network_manager.send_game_message(message)        
     
-    def on_networkManager_start_server_success(self, ip:str, port:int):
-        self.start_server_btn.config(text="關閉伺服器")
-        self.server_status.config(
-            text=f"[伺服器狀態] 運行中 ({ip}:{port})", 
-            fg="green"
-        )
-        # disable client buttons
-        self.connect_btn.config(state="disabled")
-        
-    def on_networkManager_start_server_failed(self, e):
-        self.server_status.config(
-            text=f"[錯誤] 伺服器啟動失敗: {str(e)}", 
-            fg="red"
-        )
-        
-    def on_networkManager_close_server_success(self):
-        self.start_server_btn.config(text="開啟伺服器")
-        self.server_status.config(text="[伺服器狀態] 已關閉", fg="black")
-
-        self.connect_btn.config(state="active")
-
-    def on_networkManager_close_server_failed(self, e):
-        self.server_status.config(
-            text=f"[錯誤] 伺服器關閉失敗: {str(e)}", 
-            fg="red"
-        )
-
-    def on_networkManager_server_connect_success(self, addr):
-        self.client_status.config(
-            text=f"[連線狀態] 已連接 {addr[0]}:{addr[1]}", 
-            fg="green"
-        )
-        print(f"[連線狀態] 已連接 {addr[0]}:{addr[1]}")
-        self.change_difficulty(Difficulty.EASY)
-        self.send_change_difficulty_message(Difficulty.EASY)
-    
-    def on_networkManager_server_connect_failed(self, e):
-        self.client_status.config(
-            text=f"[錯誤] 伺服器連接失敗: {str(e)}", 
-            fg="red"
-        )
-        print(f"[錯誤] 伺服器連接失敗: {str(e)}")
-        
-    def on_networkManager_client_connect_success(self, ip:str, port:int, client_ip:str, client_port:int):
-        self.connect_btn.config(text="斷開連接")
-        self.server_status.config(
-            text=f"[伺服器狀態] 已連接到 {ip}:{port}", 
-            fg="green"
-        )
-        self.client_status.config(text=f"[連線狀態] 已連接 {client_ip}:{client_port}", fg="green")
-        self.start_server_btn.config(state="disabled")
-
-    def on_networkManager_server_disconnect_success(self):
-        self.client_status.config(text="[連線狀態] 已斷線", fg="red")
-        print("[連線狀態] 已斷線")
-        self.start_server_btn.config(state="active")
-    
-    def on_networkManager_server_disconnect_failed(self, e):
-        self.client_status.config(
-            text=f"[錯誤] 伺服器斷線失敗: {str(e)}", 
-            fg="red"
-        )
-        print(f"[錯誤] 伺服器斷線失敗: {str(e)}")
-
-    def on_networkManager_client_connect_failed(self, e):
-        self.client_status.config(
-            text=f"[錯誤] 連接失敗: {str(e)}", 
-            fg="red"
-        )
-
-    def on_networkManager_client_disconnect_success(self):
-        self.connect_btn.config(text="連接伺服器")
-        self.client_status.config(text="[連線狀態] 已斷線", fg="red")
-        print("客戶端斷掉了")
-
-    def on_networkManager_client_disconnect_failed(self, e):
-        self.client_status.config(
-            text=f"[錯誤] 客戶端斷線失敗: {str(e)}", 
-            fg="red"
-        )
-        print(f"[錯誤] 客戶端斷線失敗: {str(e)}")
-
     def _poll_incoming_message(self):
         while not self.network_manager.recv_queue.empty():
             msg = self.network_manager.recv_queue.get()
-            self.on_networkManager_receive_message_success(msg)
+            self.resolve_message(msg)
             self.network_manager.recv_queue.task_done()
-        self.window.after(100, self._poll_incoming_message)
+        self.container.after(100, self._poll_incoming_message)
         
-    def on_networkManager_receive_message_success(self, message):
+    def resolve_message(self, message):
         if not isinstance(message, GameMessage):
+            self.chat_manager.add_message(message, from_self=False)
             print(f"收到一般訊息: {message}")
             return             
         handler = self.message_handlers.get(message.type)
@@ -364,7 +224,10 @@ class MineSweeper:
             handler(self, message)
         else: 
             print("沒有找到訊息的對應處理方法")
-            
+    def on_networkManager_server_connect_success(self):
+        self.change_difficulty(Difficulty.EASY)
+        self.send_change_difficulty_message(Difficulty.EASY)
+
     def on_networkManager_receive_message_failed(self, e):
         messagebox.showerror("斷開連線", f"{str(e)}")
         
@@ -424,6 +287,9 @@ class MineSweeper:
         #     data={}
         # )
         # self.network_manager.send_game_message(message)
+    
+    def on_chatManager_send_message(self, message:str):
+        self.network_manager.send_message(message)
         
 # main
 if __name__ == "__main__":
