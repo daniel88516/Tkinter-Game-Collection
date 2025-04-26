@@ -140,7 +140,7 @@ class ChatManager:
 
         # 依 from_self 決定 side
         label.pack(
-            side=RIGHT if from_self else LEFT,
+            side=LEFT if from_self else RIGHT,
             padx=10
         )
         # 新增完訊息就滑到底

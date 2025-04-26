@@ -14,7 +14,10 @@ class NetworkManager:
         threading.Thread(target=self._send_loop, daemon=True).start()
         
     def create_events(self):
-        self.on_server_connect_success:MyEvent = MyEvent()        
+        self.on_server_connect_success: MyEvent = MyEvent()   
+        self.on_server_disconnect_success: MyEvent = MyEvent()
+        self.on_client_connect_success: MyEvent = MyEvent()
+        self.on_client_disconnect_success: MyEvent = MyEvent()     
         # 接收訊息
         self.on_receive_message_success:MyEvent = MyEvent()
         self.on_receive_message_failed:MyEvent = MyEvent()
@@ -287,6 +290,19 @@ class NetworkManager:
         )
         print(f"[錯誤] 伺服器連接失敗: {str(e)}")
         
+    def server_disconnect_success(self):
+        self.client_status.config(text="[連線狀態] 已斷線", fg="red")
+        print("[連線狀態] 已斷線")
+        self.start_server_btn.config(state="active")
+        self.on_server_disconnect_success.emit()
+    
+    def server_disconnect_failed(self, e):
+        self.client_status.config(
+            text=f"[錯誤] 伺服器斷線失敗: {str(e)}", 
+            fg="red"
+        )
+        print(f"[錯誤] 伺服器斷線失敗: {str(e)}")
+
     def client_connect_success(self, ip:str, port:int, client_ip:str, client_port:int):
         self.connect_btn.config(text="斷開連接")
         self.server_status.config(
@@ -295,18 +311,7 @@ class NetworkManager:
         )
         self.client_status.config(text=f"[連線狀態] 已連接 {client_ip}:{client_port}", fg="green")
         self.start_server_btn.config(state="disabled")
-
-    def server_disconnect_success(self):
-        self.client_status.config(text="[連線狀態] 已斷線", fg="red")
-        print("[連線狀態] 已斷線")
-        self.start_server_btn.config(state="active")
-    
-    def server_disconnect_failed(self, e):
-        self.client_status.config(
-            text=f"[錯誤] 伺服器斷線失敗: {str(e)}", 
-            fg="red"
-        )
-        print(f"[錯誤] 伺服器斷線失敗: {str(e)}")
+        self.on_client_connect_success.emit()
 
     def client_connect_failed(self, e):
         self.client_status.config(
@@ -318,6 +323,7 @@ class NetworkManager:
         self.connect_btn.config(text="連接伺服器")
         self.client_status.config(text="[連線狀態] 已斷線", fg="red")
         print("客戶端斷掉了")
+        self.on_client_disconnect_success.emit()
 
     def client_disconnect_failed(self, e):
         self.client_status.config(

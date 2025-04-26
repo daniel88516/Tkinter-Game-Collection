@@ -98,11 +98,15 @@ class MineSweeper:
     def create_network_eventHandler(self):
         # server events, 開關, 連線, 斷線
         self.network_manager.on_server_connect_success.subscribe(self.on_networkManager_server_connect_success)
+        self.network_manager.on_server_disconnect_success.subscribe(self.on_networkManager_server_disconnect_success)
+        self.network_manager.on_client_connect_success.subscribe(self.on_networkManager_client_connect_success)
+        self.network_manager.on_client_disconnect_success.subscribe(self.on_networkManager_client_disconnect_success)
         
         # 接收訊息
         self.network_manager.on_receive_message_failed.subscribe(self.on_networkManager_receive_message_failed) 
         
         self.message_handlers = {    
+            GameMessageType.READY_STATE: lambda self, msg: self.opponent_toggle_ready_state(msg.data["state"]),
             GameMessageType.FIRST_CELL_REVEAL: lambda self, msg: self.opponent_board.on_reveal(msg.data["row"], msg.data["col"], msg.data["seed"]),                            
             GameMessageType.CELL_REVEAL: lambda self, msg: self.opponent_board.on_reveal(msg.data["row"], msg.data["col"]),
             GameMessageType.TOGGLE_FLAG: lambda self, msg: self.opponent_board.on_toggle_flag(msg.data["row"], msg.data["col"]),
@@ -129,6 +133,9 @@ class MineSweeper:
                 text=DifficultyConfig.CONFIGS[diff]["name"],
                 command=lambda d=diff: [self.change_difficulty(d), self.send_change_difficulty_message(d)]
             ).pack(side=LEFT, padx=5)
+        
+        self.ready_button = Button(control_frame, text="未準備", command=self.toggle_ready_state, fg="red", state=DISABLED)
+        self.ready_button.pack(side=LEFT, padx=5)
         
         reset_button = Button(control_frame, text="重置遊戲", command= lambda: [self.new_game(), self.send_reset_message()] )
         reset_button.pack(side=LEFT, padx=5)
@@ -165,7 +172,26 @@ class MineSweeper:
         self.window.geometry(f"{total_width}x{height}+{x}+{y}")
         # topmost 
         self.window.attributes("-topmost", True)
-              
+    
+    def toggle_ready_state(self):
+        self.player_board.is_ready = not self.player_board.is_ready
+        if self.player_board.is_ready:
+            self.ready_button.config(fg="green", text="已準備") 
+        else: 
+            self.ready_button.config(fg="red", text="未準備")
+        
+        message:GameMessage = GameMessage(
+            type=GameMessageType.READY_STATE,
+            data={"state":self.player_board.is_ready}
+        )
+        self.network_manager.send_game_message(message)
+    def opponent_toggle_ready_state(self, ready_state:bool):
+        self.opponent_board.is_ready = ready_state
+        if ready_state == True:        
+            self.chat_manager.add_message("對手已準備", from_self=False)
+        else:
+            self.chat_manager.add_message("對手未準備", from_self=False)
+    
     def toggle_debug_mode(self):
         """切換Debug模式"""
         self.debug_mode.set(not self.debug_mode.get())
@@ -224,7 +250,17 @@ class MineSweeper:
     def on_networkManager_server_connect_success(self):
         self.change_difficulty(Difficulty.EASY)
         self.send_change_difficulty_message(Difficulty.EASY)
+        self.ready_button.config(state=ACTIVE)
 
+    def on_networkManager_server_disconnect_success(self):
+        self.ready_button.config(state=DISABLED)
+        
+    def on_networkManager_client_connect_success(self):
+        self.ready_button.config(state=ACTIVE)
+        
+    def on_networkManager_client_disconnect_success(self):
+        self.ready_button.config(state=ACTIVE)
+        
     def on_networkManager_receive_message_failed(self, e):
         messagebox.showerror("斷開連線", f"{str(e)}")
         

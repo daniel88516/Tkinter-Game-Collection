@@ -11,6 +11,8 @@ def operation_check(method):
     def wrapper(self, *args, **kwargs):
         if getattr(self, "is_game_over", True): 
             return 
+        if not getattr(self, "is_ready", False):
+            return 
         return method(self, *args, **kwargs)
     return wrapper
 
@@ -30,11 +32,11 @@ class BoardManager:
         self.create_ui()
     
     def create_variable(self):
-        self.flagged_count = IntVar(value=0)
+        self.is_ready = False
         self.is_game_over = False
         self.first_click = True
         self.chord_holding = False
-
+        self.flagged_count:int = 0
         
     def create_events(self):
         self.on_first_reveal_cell:MyEvent = MyEvent()
@@ -58,6 +60,7 @@ class BoardManager:
     
     def reset(self):
         """重置遊戲板"""
+        self.is_ready = False
         self.is_game_over = False
         self.first_click = True
         self.gameBoard.reset()
@@ -85,6 +88,11 @@ class BoardManager:
     
     @operation_check
     def on_reveal(self, r:int, c:int, seed=None):
+        # if self.is_ready:
+        #     print("你準備好了")
+        # else: 
+        #     print("你還沒準備好")
+        #     return
         """你按下了左鍵"""
         if seed is None: 
             seed = int.from_bytes(os.urandom(4), byteorder='big')
@@ -108,7 +116,6 @@ class BoardManager:
         if cell.is_mine():
             cell.exploded = True
             cell.revealed = True
-            self.is_game_over = True
             self.game_over()
         elif cell.is_number():
             cell.revealed = True
@@ -125,7 +132,7 @@ class BoardManager:
         if cell.revealed:
             return
         
-        if self.flagged_count.get() >= self.gameBoard.mine_count: 
+        if self.flagged_count >= self.gameBoard.mine_count: 
             return
         
         cell.flagged = not cell.flagged
@@ -162,7 +169,6 @@ class BoardManager:
                         else: # empty
                             self.flood_fill(nr, nc)
         if exploded:
-            self.is_game_over = True
             self.game_over()
             
         self.update_board()
@@ -205,6 +211,7 @@ class BoardManager:
     
     def game_over(self):
         """你爆炸了"""
+        self.is_game_over = True
         self.on_game_over.emit()
         self.reveal_all_mines()
         messagebox.showinfo("遊戲結束", f"{self.name} 踩到地雷了！")
