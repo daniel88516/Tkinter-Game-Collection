@@ -3,7 +3,17 @@ from tkinter import messagebox
 import os
 from MineSweeper_Difficulty import DifficultyConfig, Difficulty
 from MineSweeper_GameBoard import GameBoard
-from MineSweeper_Event import Event 
+from MineSweeper_Event import Event
+from functools import wraps
+
+def operation_check(method):
+    @wraps(method)
+    def wrapper(self, *args, **kwargs):
+        if getattr(self, "is_game_over", True): 
+            return 
+        return method(self, *args, **kwargs)
+    return wrapper
+
 class BoardManager:
     """管理一個遊戲版塊, 初始化會用到的一些變數"""
     def __init__(self, parent_frame, tile_images, name, config:DifficultyConfig, debug_mode_var, is_opponent:bool):
@@ -13,17 +23,19 @@ class BoardManager:
         self.gameBoard = GameBoard(config, name)
         self.buttons = []
         
+        self.is_opponent = is_opponent        
+        self.debug_mode_var = debug_mode_var  # 這是共有的 debug 變數
+        self.create_variable()
+        self.create_events()
+        self.create_ui()
+    
+    def create_variable(self):
         self.flagged_count = IntVar(value=0)
         self.is_game_over = False
         self.first_click = True
         self.chord_holding = False
-        self.is_opponent = is_opponent
+
         
-        self.debug_mode_var = debug_mode_var  # 這是共有的 debug 變數
-        
-        self.create_events()
-        self.create_ui()
-    
     def create_events(self):
         self.on_reveal_cell:Event = Event()
         self.on_toggle_flag_cell:Event = Event()
@@ -70,10 +82,10 @@ class BoardManager:
                         if not neighbor.revealed and not neighbor.is_mine():
                             self.flood_fill(nr, nc)
     
+    @operation_check
     def on_reveal(self, r:int, c:int, seed=None):
         """你按下了左鍵"""
-        if self.is_game_over:
-            return
+        print("Sure")
         if seed is None: 
             seed = int.from_bytes(os.urandom(4), byteorder='big')
             
@@ -102,11 +114,9 @@ class BoardManager:
         self.update_board()
         self.check_win_condition()
     
+    @operation_check
     def on_toggle_flag(self, r:int, c:int):
-        """你按下了右鍵插旗子"""
-        if self.is_game_over:
-            return
-        
+        """你按下了右鍵插旗子"""        
         self.on_toggle_flag_cell.emit(r, c)
         cell = self.gameBoard.get_cell(r, c)
         if cell.revealed:
@@ -118,11 +128,9 @@ class BoardManager:
         cell.flagged = not cell.flagged
         self.update_board()
     
+    @operation_check
     def on_chord_click(self, r:int, c:int):
-        """你想要抄近路，玩的快一些"""
-        if self.is_game_over:
-            return
-         
+        """你想要抄近路，玩的快一些"""         
         self.on_chord_click_cell.emit(r, c)
         cell = self.gameBoard.get_cell(r, c)
         if not cell.revealed or not cell.is_number():
@@ -157,11 +165,9 @@ class BoardManager:
         self.update_board()
         self.check_win_condition()
     
+    @operation_check
     def on_chord_press(self, r:int, c:int):
         """想要展開時的「預視」效果"""
-        if self.is_game_over:
-            return
-        
         self.on_chord_press_cell.emit(r, c)
         cell = self.gameBoard.get_cell(r, c)
         if not cell.revealed or not cell.is_number():
@@ -274,6 +280,5 @@ class BoardManager:
                 if self.is_opponent:
                     btn.config(state="disabled")
                 row_buttons.append(btn)
-            self.buttons.append(row_buttons)
-        
+            self.buttons.append(row_buttons)        
         self.reset()

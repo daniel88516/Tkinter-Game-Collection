@@ -5,6 +5,8 @@ from MineSweeper_Difficulty import DifficultyConfig, Difficulty
 from MineSweeper_BoardManager import BoardManager
 from MineSweeper_NetworkManager import NetworkManager
 from MineSweeper_GameMessage import GameMessage, GameMessageType
+from MineSweeper_ChatManager import ChatManager
+from MineSweeper_Event import Event
 class MineSweeper:
     """主遊戲類"""
     def __init__(self, window:Tk):
@@ -12,9 +14,10 @@ class MineSweeper:
         self.create_variable()
         self.create_gameBoard()
         self.create_gameBoard_eventHandler()
-        self.create_network_eventHandler()
         self.create_control_panel()
         self.create_network_panel()
+        self.create_network_eventHandler()
+        self.create_chat_panel()
         self.center_window()
 
     def start(self):
@@ -38,15 +41,16 @@ class MineSweeper:
         self.debug_mode = BooleanVar(value=False)
         self.board_managers:list[BoardManager] = []
         self.config = DifficultyConfig(Difficulty.EASY)
-        self.network_manager:NetworkManager = NetworkManager()
+        self.network_manager:NetworkManager = NetworkManager(self.window)
+        self.chat_manager:ChatManager = ChatManager(self.window)
         
         self.server_ip_var:StringVar = StringVar(value=self.network_manager.get_local_ip())
         self.server_port_var:StringVar = StringVar(value="12345")
         
         self.client_ip_var:StringVar = StringVar(value=self.network_manager.get_local_ip())
         self.client_port_var:StringVar = StringVar(value="12345")
-        
-        self.server_message_var:StringVar = StringVar(value="")
+
+        self.message_var:StringVar = StringVar(value="")
         self.client_message_var:StringVar = StringVar(value="")
          
     def create_gameBoard(self):
@@ -152,32 +156,19 @@ class MineSweeper:
         self.server_port_entry = Entry(server_frame, textvariable=self.server_port_var)
         self.server_port_entry.grid(row=1, column=1, padx=5)
         
-        Label(server_frame, text="訊息:").grid(row=2, column=0)
-        self.server_send_message_entry = Entry(server_frame, textvariable=self.server_message_var)
-        self.server_send_message_entry.grid(row=2, column=1, padx=5)
-
-        server_button_frame = Frame(server_frame)
         self.start_server_btn = Button(
-            server_button_frame,
+            server_frame,
             text="開啟伺服器",
             command=lambda :self.network_manager.toggle_server(self.server_ip_var.get(), int(self.server_port_var.get()))
         )
-        self.start_server_btn.pack(side=LEFT, padx=5)
-
-        self.server_send_message_btn = Button(
-            server_button_frame,
-            text="發送訊息",
-            command=lambda :self.network_manager.send_message(f"[伺服器訊息]{self.server_message_var.get()}")
-        )
-        self.server_send_message_btn.pack(side=LEFT, padx=5)
-        server_button_frame.grid(row=3, columnspan=2, pady=5)
+        self.start_server_btn.grid(row=2, columnspan=2, padx=5)
 
         self.server_status = Label(
             server_frame, 
             text="[伺服器狀態] 未啟動"
         )
         self.server_status.grid(row=4, columnspan=2)
-        
+
         # 客戶端區塊
         client_frame = LabelFrame(self.window, text="客戶端設定")
         client_frame.pack(pady=10, padx=10, fill="x", side=LEFT)
@@ -190,32 +181,35 @@ class MineSweeper:
         self.client_port_entry = Entry(client_frame, textvariable=self.client_port_var)
         self.client_port_entry.grid(row=1, column=1, padx=5)
         
-        Label(client_frame, text="訊息:").grid(row=2, column=0)
-        self.client_send_message_entry = Entry(client_frame, textvariable=self.client_message_var)
-        self.client_send_message_entry.grid(row=2, column=1, padx=5)
-        
-        client_button_frame = Frame(client_frame)
         self.connect_btn = Button(
-            client_button_frame,
+            client_frame,
             text="連接伺服器",
             command=lambda :self.network_manager.toggle_connection(self.client_ip_var.get(), int(self.client_port_var.get()))
         )
-        self.connect_btn.pack(side=LEFT, padx=5)
-
-        self.client_send_message_btn = Button(
-            client_button_frame,
-            text="發送訊息",
-            command=lambda :self.network_manager.send_message(f"[客戶端訊息]{self.client_message_var.get()}")
-        )
-        self.client_send_message_btn.pack(side=LEFT, padx=5)
-        client_button_frame.grid(row=3, columnspan=2, pady=5)
-
+        self.connect_btn.grid(row=3, columnspan=2, padx=5)
 
         self.client_status = Label(
             client_frame,
             text="[連線狀態] 未連接"
         )
-        self.client_status.grid(row=4, columnspan=2)
+        self.client_status.grid(row=4, columnspan=2, padx=5)
+        
+    def create_chat_panel(self):
+        """聊天區域"""
+        self.chat_manager:ChatManager = ChatManager(self.window)
+
+        # chat_input_frame = LabelFrame(self.window, text="聊天室").pack(padx=10, pady=10, fill="x", side=LEFT)
+        # canvas = Canvas(chat_input_frame)
+        # scrollbar = Scrollbar(
+        #     chat_input_frame
+        # )
+        # Entry(chat_input_frame, textvariable=self.message_var).pack(side=LEFT, padx=5)
+        # self.send_message_btn = Button(
+        #     chat_input_frame,
+        #     text="傳送",
+        #     command=lambda :self.network_manager.send_message(f"{self.message_var.get()}")
+        # )
+        # self.send_message_btn.pack(side=LEFT, padx=5)
         
     def center_window(self):
         """調整視窗大小和位置"""

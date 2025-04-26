@@ -3,11 +3,13 @@ import threading
 import json
 from MineSweeper_Event import Event
 from MineSweeper_GameMessage import GameMessage
+from tkinter import * 
 
 class NetworkManager:    
-    def __init__(self):
-        self.create_events()
+    def __init__(self, window:Tk):
+        self.window = window
         self.create_variable()
+        self.create_events()
         
     def create_events(self):
         # server events, 開關, 連線, 斷線
@@ -35,7 +37,63 @@ class NetworkManager:
         self.client_socket = None
         self.is_server_running = False
         self.connection_status = False
+        
+        self.server_ip_var:StringVar = StringVar(value=self.get_local_ip())
+        self.server_port_var:StringVar = StringVar(value="12345")
+        
+        self.client_ip_var:StringVar = StringVar(value=self.get_local_ip())
+        self.client_port_var:StringVar = StringVar(value="12345")
 
+    def create_widget(self):
+        server_frame = LabelFrame(self.window, text="伺服器設定")
+        server_frame.pack(pady=10, padx=10, fill="x", side=LEFT)
+
+        Label(server_frame, text="IP:").grid(row=0, column=0)
+        self.server_ip_entry = Entry(server_frame, textvariable=self.server_ip_var)
+        self.server_ip_entry.grid(row=0, column=1, padx=5)
+
+        Label(server_frame, text="Port:").grid(row=1, column=0)
+        self.server_port_entry = Entry(server_frame, textvariable=self.server_port_var)
+        self.server_port_entry.grid(row=1, column=1, padx=5)
+        
+        self.start_server_btn = Button(
+            server_frame,
+            text="開啟伺服器",
+            command=lambda :self.toggle_server(self.server_ip_var.get(), int(self.server_port_var.get()))
+        )
+        self.start_server_btn.grid(row=2, columnspan=2, padx=5)
+
+        self.server_status = Label(
+            server_frame, 
+            text="[伺服器狀態] 未啟動"
+        )
+        self.server_status.grid(row=4, columnspan=2)
+
+        # 客戶端區塊
+        client_frame = LabelFrame(self.window, text="客戶端設定")
+        client_frame.pack(pady=10, padx=10, fill="x", side=LEFT)
+
+        Label(client_frame, text="目標IP:").grid(row=0, column=0)
+        self.client_ip_entry = Entry(client_frame, textvariable=self.client_ip_var)
+        self.client_ip_entry.grid(row=0, column=1, padx=5)
+
+        Label(client_frame, text="目標Port:").grid(row=1, column=0)
+        self.client_port_entry = Entry(client_frame, textvariable=self.client_port_var)
+        self.client_port_entry.grid(row=1, column=1, padx=5)
+        
+        self.connect_btn = Button(
+            client_frame,
+            text="連接伺服器",
+            command=lambda :self.toggle_connection(self.client_ip_var.get(), int(self.client_port_var.get()))
+        )
+        self.connect_btn.grid(row=3, columnspan=2, padx=5)
+
+        self.client_status = Label(
+            client_frame,
+            text="[連線狀態] 未連接"
+        )
+        self.client_status.grid(row=4, columnspan=2, padx=5)
+        
     def get_local_ip(self):
         try:
             # 建立一個 UDP socket
@@ -76,10 +134,8 @@ class NetworkManager:
             return
         try:
             if self.client_socket:
-                # self._safe_close(self.client_socket)
                 self.client_socket.close()
             if self.server_socket:
-                # self._safe_close(self.server_socket)
                 self.server_socket.close()
             self.is_server_running = False
             self.connection_status = False
