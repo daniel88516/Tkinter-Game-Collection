@@ -1,4 +1,4 @@
-class Event:
+class MyEvent:
     def __init__(self):
         self._subscribers = []
 

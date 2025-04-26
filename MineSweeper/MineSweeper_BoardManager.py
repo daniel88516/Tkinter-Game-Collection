@@ -3,7 +3,7 @@ from tkinter import messagebox
 import os
 from MineSweeper_Difficulty import DifficultyConfig, Difficulty
 from MineSweeper_GameBoard import GameBoard
-from MineSweeper_Event import Event
+from MineSweeper_Event import MyEvent
 from functools import wraps
 
 def operation_check(method):
@@ -37,13 +37,14 @@ class BoardManager:
 
         
     def create_events(self):
-        self.on_reveal_cell:Event = Event()
-        self.on_toggle_flag_cell:Event = Event()
-        self.on_chord_click_cell:Event = Event()
-        self.on_chord_press_cell:Event = Event()
-        self.on_chord_release_cell:Event = Event()
-        self.on_game_over:Event = Event()
-        self.on_complete:Event = Event()
+        self.on_first_reveal_cell:MyEvent = MyEvent()
+        self.on_reveal_cell:MyEvent = MyEvent()
+        self.on_toggle_flag_cell:MyEvent = MyEvent()
+        self.on_chord_click_cell:MyEvent = MyEvent()
+        self.on_chord_press_cell:MyEvent = MyEvent()
+        self.on_chord_release_cell:MyEvent = MyEvent()
+        self.on_game_over:MyEvent = MyEvent()
+        self.on_complete:MyEvent = MyEvent()
     
     def create_ui(self):
         """創建 UI"""
@@ -85,23 +86,25 @@ class BoardManager:
     @operation_check
     def on_reveal(self, r:int, c:int, seed=None):
         """你按下了左鍵"""
-        print("Sure")
         if seed is None: 
             seed = int.from_bytes(os.urandom(4), byteorder='big')
             
+        # 旗標不會被展開
+        cell = self.gameBoard.get_cell(r, c)
+        
+        if not cell.revealed and cell.flagged:
+            return
+        
         # 第一次按下的時候, 才擺放地雷
-        self.on_reveal_cell.emit(r, c, seed)
         if self.first_click:
             self.first_click = False
+            self.on_first_reveal_cell.emit(r, c, seed)
             self.gameBoard.place_mines(r, c, seed)
             self.gameBoard.calculate_numbers()
 
-        # 旗標不會被展開
-        cell = self.gameBoard.get_cell(r, c)
-        if not cell.revealed and cell.flagged:
-            return
 
         # 每次按下, 判斷是否為地雷
+        self.on_reveal_cell.emit(r, c)
         if cell.is_mine():
             cell.exploded = True
             cell.revealed = True
@@ -131,7 +134,6 @@ class BoardManager:
     @operation_check
     def on_chord_click(self, r:int, c:int):
         """你想要抄近路，玩的快一些"""         
-        self.on_chord_click_cell.emit(r, c)
         cell = self.gameBoard.get_cell(r, c)
         if not cell.revealed or not cell.is_number():
             return
@@ -140,6 +142,7 @@ class BoardManager:
         if flag_count != cell.number:
             return
         
+        self.on_chord_click_cell.emit(r, c)
         exploded = False
         for dr in [-1, 0, 1]:
             for dc in [-1, 0, 1]:
@@ -168,7 +171,6 @@ class BoardManager:
     @operation_check
     def on_chord_press(self, r:int, c:int):
         """想要展開時的「預視」效果"""
-        self.on_chord_press_cell.emit(r, c)
         cell = self.gameBoard.get_cell(r, c)
         if not cell.revealed or not cell.is_number():
             return
@@ -177,6 +179,7 @@ class BoardManager:
         if flag_count != cell.number:
             return
             
+        self.on_chord_press_cell.emit(r, c)
         self.chord_holding = True
         # 臨時顯示周圍未標記格子的內容
         for dr in [-1, 0, 1]:
