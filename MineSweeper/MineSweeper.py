@@ -1,11 +1,11 @@
 from tkinter import * 
-from tkinter import messagebox
 import os
 from MineSweeper_Difficulty import DifficultyConfig, Difficulty
 from MineSweeper_BoardManager import BoardManager
 from MineSweeper_NetworkManager import NetworkManager
 from MineSweeper_GameMessage import GameMessage, GameMessageType
 from MineSweeper_ChatManager import ChatManager
+from MineSweeper_Counter import CountDownTimer
 class MineSweeper:
     """主遊戲類"""
     def __init__(self, window:Tk):
@@ -15,6 +15,7 @@ class MineSweeper:
         
         self.load_images()
         self.create_variable()
+        self.create_counter_eventHandler() # timer 在 create_variable 當中
         
         self.create_gameBoard()
         self.create_gameBoard_eventHandler()
@@ -26,6 +27,7 @@ class MineSweeper:
         
         self.create_chat_panel()
         self.create_chat_eventHandler()
+        
         
         self.center_window()
         
@@ -56,6 +58,8 @@ class MineSweeper:
         self.chat_manager:ChatManager = ChatManager()
         
         self.message_var:StringVar = StringVar(value="")
+        self.game_started:bool = False
+        self.timer = CountDownTimer(self.container)
          
     def create_gameBoard(self):
         """創建UI元素"""
@@ -118,6 +122,10 @@ class MineSweeper:
             GameMessageType.CHANGE_DIFFICULTY: lambda self,msg :self.change_difficulty(msg.data["difficulty"]),
         }
    
+    def create_counter_eventHandler(self):
+        self.timer.on_counter_change.subscribe(self.on_timer_count_change)
+        self.timer.on_count_end.subscribe(self.on_timer_count_end)
+        
     def create_control_panel(self):
         """控制面板"""
         control_frame = Frame(self.gameBoard_frame)
@@ -166,8 +174,8 @@ class MineSweeper:
 
         # 計算視窗大小
         board_width = self.config.board_width * 32
-        total_width = board_width * len(self.board_managers) + 160 + (20 * (len(self.board_managers) - 1))
-        height = self.config.board_height * 32 + 400
+        total_width = board_width * len(self.board_managers) + 250 + (20 * (len(self.board_managers) - 1))
+        height = self.config.board_height * 32 + 350
         
         screen_width = self.window.winfo_screenwidth()
         screen_height = self.window.winfo_screenheight()
@@ -177,31 +185,39 @@ class MineSweeper:
         # topmost 
         self.window.attributes("-topmost", True)
         
-    def toggle_ready_state(self, targetState:bool=None):
+    def toggle_ready_state(self):
         self.player_board.is_ready = not self.player_board.is_ready
         if self.player_board.is_ready:
             self.ready_button.config(fg="green", text="已準備")
             self.reset_button.config(state=DISABLED)
             for btn in self.difficulty_buttons:
                 btn.config(state=DISABLED)
-        else: 
+        else:
             self.ready_button.config(fg="red", text="未準備")
             self.reset_button.config(state=ACTIVE)
             for btn in self.difficulty_buttons:
                 btn.config(state=ACTIVE)
-
         
         message:GameMessage = GameMessage(
             type=GameMessageType.READY_STATE,
             data={"state":self.player_board.is_ready}
         )
         self.network_manager.send_game_message(message)
+        if self.can_start_game(): 
+            self.timer.start_countdown()
+            
+            
     def opponent_toggle_ready_state(self, ready_state:bool):
         self.opponent_board.is_ready = ready_state
         if ready_state == True:        
             self.chat_manager.add_message("對手已準備", from_self=False)
         else:
             self.chat_manager.add_message("對手未準備", from_self=False)
+        if self.can_start_game():
+            self.timer.start_countdown()
+    
+    def can_start_game(self) -> bool:
+        return self.player_board.is_ready and self.opponent_board.is_ready
     
     def toggle_debug_mode(self):
         """切換Debug模式"""
@@ -218,9 +234,7 @@ class MineSweeper:
         """開始新遊戲"""
         for board_manager in self.board_managers:
             board_manager.reset()
-        
-        self.ready_button.config(text="未準備", fg="red")
-            
+                        
     def send_reset_message(self):
         """傳送重置的訊息"""
         # 不能放到 new_game 當中, 因為會彼此傳來傳去
@@ -283,7 +297,7 @@ class MineSweeper:
         self.config_control_panel_buttons(DISABLED)
     
     def config_control_panel_buttons(self, state):
-        self.ready_button.config(state=state)
+        self.ready_button.config(text="未準備", fg="red", state=state)
         self.chat_manager.send_btn.config(state=state)
         self.reset_button.config(state=state)
         for btn in self.difficulty_buttons:
@@ -331,23 +345,31 @@ class MineSweeper:
         )
         self.network_manager.send_game_message(message)
     
-    def on_player_game_over(self):
+    def on_player_game_over(self, msg:str):
         message:GameMessage = GameMessage(
             type=GameMessageType.GAME_OVER,
             data={}
         )
         self.network_manager.send_game_message(message)
 
-    def on_player_complete(self):
+    def on_player_complete(self, msg:str):
         """處理遊戲板勝利事件"""
-        # message:GameMessage = GameMessage(
-        #     type=GameMessageType.GAME_COMPLETE,
-        #     data={}
-        # )
-        # self.network_manager.send_game_message(message)
-    
+        message:GameMessage = GameMessage(
+            type=GameMessageType.GAME_COMPLETE,
+            data={"result":"對方完成了!"}
+        )
+        self.network_manager.send_game_message()
+        
     def on_chatManager_send_message(self, message:str):
         self.network_manager.send_message(message)
+
+    def on_timer_count_change(self, msg:str):
+        self.network_manager.send_message(msg)
+        
+    def on_timer_count_end(self):
+        for gameBoard in self.board_managers:
+            gameBoard.is_game_started = True
+        self.config_control_panel_buttons(DISABLED)
         
 # main
 if __name__ == "__main__":

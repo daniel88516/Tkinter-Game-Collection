@@ -13,6 +13,8 @@ def operation_check(method):
             return 
         if not getattr(self, "is_ready", False):
             return 
+        if not getattr(self, "is_game_started", False):
+            return
         return method(self, *args, **kwargs)
     return wrapper
 
@@ -34,6 +36,7 @@ class BoardManager:
     def create_variable(self):
         self.is_ready = False
         self.is_game_over = False
+        self.is_game_started = False
         self.first_click = True
         self.chord_holding = False
         self.flagged_count:int = 0
@@ -61,6 +64,7 @@ class BoardManager:
     def reset(self):
         """重置遊戲板"""
         self.is_ready = False
+        self.is_game_started = False
         self.is_game_over = False
         self.first_click = True
         self.gameBoard.reset()
@@ -207,9 +211,9 @@ class BoardManager:
     def game_over(self):
         """你爆炸了"""
         self.is_game_over = True
-        self.on_game_over.emit()
+        msg = f"遊戲結束{self.name} 踩到地雷了！"
+        self.on_game_over.emit(msg)
         self.reveal_all_mines()
-        messagebox.showinfo("遊戲結束", f"{self.name} 踩到地雷了！")
     
     def check_win_condition(self):
         """勝利唾手可得"""
@@ -220,8 +224,8 @@ class BoardManager:
                     return
                     
         self.is_game_over = True
-        messagebox.showinfo("恭喜", f"{self.name} 贏了！")
-        self.on_complete.emit()
+        msg = f"恭喜,{self.name}贏了!"
+        self.on_complete.emit(msg)
     
     def reveal_all_mines(self):
         """顯示所有地雷"""
