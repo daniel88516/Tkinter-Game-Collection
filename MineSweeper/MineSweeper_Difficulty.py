@@ -27,8 +27,15 @@ class DifficultyConfig():
         }
     }
     def __init__(self, difficulty: Difficulty):
+        self.difficulty = difficulty
         config = self.CONFIGS[difficulty]
         self.board_width:int = config["board_width"]
         self.board_height:int = config["board_height"]
         self.mine_count:int = config["mine_count"]
         self.name:str = config["name"]
+    
+    def __eq__(self, other):
+        if not isinstance(other, DifficultyConfig):
+            return False
+        return self.difficulty == other.difficulty
+        

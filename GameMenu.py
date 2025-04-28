@@ -3,7 +3,6 @@ import subprocess
 from tkinter import *
 from tkinter import ttk, messagebox
 from PIL import Image, ImageTk
-import webbrowser 
 
 class GameMenu:
     def __init__(self):
@@ -36,21 +35,17 @@ class GameMenu:
                         padding=(0, 10))
 
         # 遊戲 TreeView
-        self.tree = ttk.Treeview(self.window, show="headings", columns=("game",) , height=10 )
+        self.tree = ttk.Treeview(self.window, show="headings", columns=("game",))
         self.tree.heading("game", text="遊戲清單")
         self.tree.column("game", anchor="center")
-        self.tree.pack(fill="x", expand=False, padx=40, pady=20)
-
+        self.tree.pack(fill="both", expand=True, padx=40, pady=20)
 
         # 遊戲清單
         self.games = {
             "Zombie": "Z_main.py",
             "Monty Hall": "ThreeHall.py",
             "井字遊戲": "TicTacToe.py",
-            "踩地雷": "MineSweeper.py",
-            "蛤": "https://www.xn--8c2a.tw/",
-            "AiScReam": "https://www.youtube.com/shorts/7Hl09MEWDN8",
-            "讓我看看": "https://www.youtube.com/shorts/EMYeNnVC5P0",
+            "踩地雷": "MineSweeper_SinglePlayer.py",
         }
 
         for name in self.games:
@@ -71,15 +66,7 @@ class GameMenu:
                           activebackground="darkred", command=self.window.quit)
         exit_btn.pack(pady=10)
 
-        # 預選第一個項目
-        first_item = self.tree.get_children()[0]
-        self.tree.selection_set(first_item)
-        self.tree.focus(first_item)
-        self.tree.event_generate("<<TreeviewSelect>>")
-
         self.window.mainloop()
-
-
 
     def show_context_menu(self, event):
         item = self.tree.identify_row(event.y)
@@ -93,11 +80,8 @@ class GameMenu:
             game_name = self.tree.item(selected_item[0])["values"][0]
             py_file = self.games.get(game_name)
             if py_file:
-                if py_file.startswith("http"):
-                    webbrowser.open(py_file)  # 開網頁
-                else:
-                    full_path = os.path.join(os.path.dirname(__file__), py_file)
-                    subprocess.Popen(["python", full_path], shell=True)
+                full_path = os.path.join(os.path.dirname(__file__), py_file)
+                subprocess.Popen(["python", full_path], shell=True)
                 
     def show_game_tutorial(self):
         selected_item = self.tree.selection()
