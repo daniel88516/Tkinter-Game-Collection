@@ -208,8 +208,7 @@ class MineSweeper:
             self.player_board.countup_timer.reset()
             self.opponent_board.countup_timer.reset()
             self.countdown_timer.start_countdown()
-            
-            
+                     
     def opponent_toggle_ready_state(self, ready_state:bool):
         self.opponent_board.is_ready = ready_state
         if ready_state == True:        
