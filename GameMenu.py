@@ -6,6 +6,7 @@ from PIL import Image, ImageTk
 
 class GameMenu:
     def __init__(self):
+        # 建立主視窗
         self.window = Tk()
         self.window.title("Game Menu")
         screen_width = self.window.winfo_screenwidth()
@@ -13,7 +14,7 @@ class GameMenu:
         w, h = 600, 800
         x, y = (screen_width - w) // 2, (screen_height - h) // 2
         self.window.geometry(f"{w}x{h}+{x}+{y}")
-        self.window.configure(bg="BLACK")
+        self.window.configure(bg="black")
         self.window.resizable(False, False)
 
         # 載入圖片當標題
@@ -26,22 +27,38 @@ class GameMenu:
 
         # TreeView 樣式設定
         style = ttk.Style()
-        style.theme_use("clam") 
-        style.configure("Treeview", font=("Arial", 20), rowheight=40)
-        style.configure("Treeview.Heading",
-                        background="lightblue",
-                        foreground="black",
-                        font=("Arial", 16, "bold"),
-                        padding=(0, 10))
+        style.theme_use("clam")
 
-        # 遊戲 TreeView
-        self.tree = ttk.Treeview(self.window, show="headings", columns=("game",))
+        style.configure("Treeview",
+            font=("微軟正黑體", 18, "bold"),
+            rowheight=50,
+            background="black",
+            foreground="white",
+            fieldbackground="black",
+            bordercolor="white",
+            borderwidth=1,
+            relief="solid"
+        )
+
+        style.configure("Treeview.Heading",
+            font=("微軟正黑體", 20, "bold"),
+            background="#00BFFF",
+            foreground="white",
+            padding=(5, 10)
+        )
+
+        style.map('Treeview', 
+            background=[('selected', '#FF69B4'), ('active', '#404040')],
+            foreground=[('selected', 'white')]
+        )
+
+        # 建立 TreeView
+        self.tree = ttk.Treeview(self.window, show="headings", columns=("game",), height=6)
         self.tree.heading("game", text="遊戲清單")
         self.tree.column("game", anchor="center")
         self.tree.pack(fill="both", expand=True, padx=40, pady=20)
 
         # 遊戲清單
-        base_path = os.path.dirname(__file__)
         self.games = {
             "Zombie": os.path.join(base_path, "Z_main.py"),
             "Monty Hall": os.path.join(base_path, "ThreeHall.py"),
@@ -49,8 +66,14 @@ class GameMenu:
             "踩地雷(單人版)": os.path.join(base_path, "MineSweeper_SinglePlayer.py"),
             "踩地雷(多人版)": os.path.join(base_path, "MineSweeper", "MineSweeper.py")
         }
-        for name in self.games:
-            self.tree.insert("", "end", values=(name,))
+
+        # TreeView條紋列
+        self.tree.tag_configure('evenrow', background="#2a2a2a")  # 偶數行
+        self.tree.tag_configure('oddrow', background="#1a1a1a")   # 奇數行
+
+        for idx, name in enumerate(self.games):
+            tag = "evenrow" if idx % 2 == 0 else "oddrow"
+            self.tree.insert("", "end", values=(name,), tags=(tag,))
 
         # 右鍵選單
         self.menu = Menu(self.window, tearoff=0)
@@ -63,11 +86,13 @@ class GameMenu:
         self.tree.bind("<Return>", lambda e: self.run_selected_game())
 
         # 退出按鈕
-        exit_btn = Button(self.window, text="退出", font=("Arial", 10), bg="red", fg="white",
-                          activebackground="darkred", command=self.window.quit)
+        exit_btn = Button(self.window, text="退出", font=("微軟正黑體", 14, "bold"),
+                        bg="red", fg="white", activebackground="darkred", command=self.window.quit)
         exit_btn.pack(pady=10)
 
         self.window.mainloop()
+
+
 
     def show_context_menu(self, event):
         item = self.tree.identify_row(event.y)
