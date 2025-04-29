@@ -178,8 +178,8 @@ class MineSweeper:
 
         # 計算視窗大小
         board_width = self.config.board_width * 32
-        total_width = board_width * len(self.board_managers) + 250 + (20 * (len(self.board_managers) - 1))
-        height = self.config.board_height * 32 + 400
+        total_width = board_width * len(self.board_managers) + 350 + (20 * (len(self.board_managers) - 1))
+        height = self.config.board_height * 32 + 500
         
         screen_width = self.window.winfo_screenwidth()
         screen_height = self.window.winfo_screenheight()
@@ -266,7 +266,6 @@ class MineSweeper:
             for board_manager in self.board_managers:
                 board_manager.change_difficulty(self.config)
             self.center_window()
-            self.config_control_panel_buttons(DISABLED)
         else: 
             # 難度不變,但需要清空場地
             self.new_game()
@@ -321,7 +320,7 @@ class MineSweeper:
     
     def config_control_panel_buttons(self, state):
         self.ready_button.config(text="未準備", fg="red", state=state)
-        self.chat_manager.send_btn.config(state=state)
+        self.chat_manager.config_buttons(state=state)
         self.reset_button.config(state=state)
         for btn in self.difficulty_buttons:
             btn.config(state=state)

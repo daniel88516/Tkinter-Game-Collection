@@ -1,5 +1,4 @@
 from tkinter import *
-from tkinter import filedialog
 from PIL import Image, ImageTk
 from MineSweeper_Event import MyEvent
 
@@ -35,7 +34,7 @@ class ChatManager:
         )
 
         # Canvas + Scrollbar
-        self.canvas = Canvas(display_frame, width=130, height=130)
+        self.canvas = Canvas(display_frame, width=200, height=200)
         scrollbar = Scrollbar(
             display_frame,
             orient=VERTICAL,
@@ -94,32 +93,32 @@ class ChatManager:
             lambda e: self.canvas.yview_scroll(1, "units")
         )
 
-        # 輸入區塊，放在 display_frame 之下
-        bottom_frame = Frame(chat_input_frame)
-        bottom_frame.pack(
-            side="bottom",
-            fill="x",
-            padx=5,
-            pady=5
-        )
+        # # 輸入區塊，放在 display_frame 之下
+        # bottom_frame = Frame(chat_input_frame)
+        # bottom_frame.pack(
+        #     side="bottom",
+        #     fill="x",
+        #     padx=5,
+        #     pady=5
+        # )
 
-        self.entry = Entry(bottom_frame, textvariable=self.entry_var)
-        self.entry.pack(
-            side="left",
-            fill="x",
-            expand=True,
-            padx=(0, 5)
-        )
+        # self.entry = Entry(bottom_frame, textvariable=self.entry_var)
+        # self.entry.pack(
+        #     side="left",
+        #     fill="x",
+        #     expand=True,
+        #     padx=(0, 5)
+        # )
 
-        self.send_btn = Button(
-            bottom_frame,
-            text="傳送",
-            command=self.send_message,
-            state=DISABLED
-        )
-        self.send_btn.pack(
-            side="left"
-        )
+        # self.send_btn = Button(
+        #     bottom_frame,
+        #     text="傳送",
+        #     command=self.send_message,
+        #     state=DISABLED
+        # )
+        # self.send_btn.pack(
+        #     side="left"
+        # )
 
         # 新增圖片按鈕區域
         image_button_frame = Frame(chat_input_frame)
@@ -131,17 +130,17 @@ class ChatManager:
         )
 
         # 載入圖片並新增按鈕
-        self.image_buttons = []
+        self.sticker_btns = []
         self.image_paths = [
-            "Images/MineSweeper/Tile1.png",
-            "Images/MineSweeper/Tile2.png",
-            "Images/MineSweeper/Tile3.png",
-            "Images/MineSweeper/Tile4.png",
+            "Images/Stickers/happy.png",
+            "Images/Stickers/shock.png",
+            "Images/Stickers/cry.png",
+            "Images/Stickers/shock.png",
         ]
         for image_path in self.image_paths:
             try:
                 img = Image.open(image_path)
-                img.thumbnail((50, 50))  # 縮小圖片作為按鈕預覽
+                img = img.resize((80, 80), Image.LANCZOS)
                 photo = ImageTk.PhotoImage(img)
 
                 btn = Button(
@@ -151,7 +150,8 @@ class ChatManager:
                 )
                 btn.image = photo  # 防止圖片被垃圾回收
                 btn.pack(side="left", padx=5)
-                self.image_buttons.append(btn)
+                btn.config(state=DISABLED)
+                self.sticker_btns.append(btn)
             except Exception as e:
                 print(f"無法載入圖片 {image_path}: {e}")  
     
@@ -231,10 +231,15 @@ class ChatManager:
             widget.destroy()
         # 重置 Canvas 的 scrollregion
         self.canvas.configure(scrollregion=self.canvas.bbox("all"))
-        
+    
+    def config_buttons(self, state):
+        for btn in self.sticker_btns:
+            btn.config(state=state)
+            
 if __name__=="__main__":
     window:Tk = Tk()
     chat_manager = ChatManager()
     chat_manager.create_widget(window)
-    chat_manager.send_btn.config(state=ACTIVE)
+    chat_manager.config_buttons(state=ACTIVE)
+    # chat_manager.send_btn.config(state=ACTIVE)
     window.mainloop()
