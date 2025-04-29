@@ -29,6 +29,7 @@ class GameMenu:
         style = ttk.Style()
         style.theme_use("clam")
 
+
         style.configure("Treeview",
             font=("微軟正黑體", 18, "bold"),
             rowheight=50,
@@ -57,6 +58,8 @@ class GameMenu:
         self.tree.heading("game", text="遊戲清單")
         self.tree.column("game", anchor="center")
         self.tree.pack(fill="both", expand=True, padx=40, pady=20)
+        self.tree.tag_configure('hover', background="#555555")  
+
 
         # 遊戲清單
         self.games = {
@@ -71,9 +74,11 @@ class GameMenu:
         self.tree.tag_configure('evenrow', background="#2a2a2a")  # 偶數行
         self.tree.tag_configure('oddrow', background="#1a1a1a")   # 奇數行
 
+        self.row_tags = {}
         for idx, name in enumerate(self.games):
             tag = "evenrow" if idx % 2 == 0 else "oddrow"
-            self.tree.insert("", "end", values=(name,), tags=(tag,))
+            item_id = self.tree.insert("", "end", values=(name,), tags=(tag,))
+            self.row_tags[item_id] = tag  # <== 記錄每一行原本的 tag
 
         # 右鍵選單
         self.menu = Menu(self.window, tearoff=0)
@@ -81,9 +86,12 @@ class GameMenu:
         self.menu.add_command(label="🛡️以系統管理員執行", command=self.run_selected_game)
         self.menu.add_command(label="📘    遊戲教學", command=self.show_game_tutorial)
 
+        #事件
         self.tree.bind("<Button-3>", self.show_context_menu)
         self.tree.bind("<Double-1>", lambda e: self.run_selected_game())
         self.tree.bind("<Return>", lambda e: self.run_selected_game())
+        self.tree.bind("<Motion>", self.on_mouse_move)
+
 
         # 退出按鈕
         exit_btn = Button(self.window, text="退出", font=("微軟正黑體", 14, "bold"),
@@ -150,6 +158,22 @@ class GameMenu:
             label.pack(padx=20, pady=20)
         else:
             messagebox.showinfo("提示", "目前沒有教學")
+    
+    def on_mouse_move(self, event):
+        region = self.tree.identify('region', event.x, event.y)
+        if region == 'cell':  
+            row_id = self.tree.identify_row(event.y)
+            if hasattr(self, 'hover_row') and self.hover_row == row_id:
+                return  
+            if hasattr(self, 'hover_row') and self.hover_row:
+                self.tree.item(self.hover_row, tags=(self.row_tags[self.hover_row],))
+            self.hover_row = row_id
+            if row_id:
+                self.tree.item(row_id, tags=('hover',))
+        else:
+            if hasattr(self, 'hover_row') and self.hover_row:
+                self.tree.item(self.hover_row, tags=(self.row_tags[self.hover_row],))
+                self.hover_row = None
 
 
 if __name__ == "__main__":
