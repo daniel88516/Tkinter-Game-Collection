@@ -95,6 +95,7 @@ class BoardManager:
         self.is_game_over = False
         self.first_click = True
         self.gameBoard.reset()
+        self.countup_timer.reset()
         self.update_board()
         # 重置計時器顯示
         self.countup_timer.reset()

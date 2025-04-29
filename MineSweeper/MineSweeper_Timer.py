@@ -58,6 +58,8 @@ class CountUpTimer:
     def reset(self):
         self.stop_countdown()
         self.second = 0
+        self.countdown_var.set("未開始")
+        self.after_id = None
                 
     def start_countdown(self):
         if self.after_id is None:

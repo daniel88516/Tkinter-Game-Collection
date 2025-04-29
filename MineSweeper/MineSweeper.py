@@ -374,7 +374,7 @@ class MineSweeper:
             data={"result": "對方爆炸了!"}
         )
         self.network_manager.send_game_message(message)
-        self.chat_manager.add_message(f"{self.player_board.get_timer_value()} vs {self.opponent_board.get_timer_value()}")
+        self.chat_manager.add_message(f"{self.player_board.get_timer_value()} vs {self.opponent_board.get_timer_value()}", from_self=True)
         self.new_game()
         self.config_control_panel_buttons(ACTIVE)
         
@@ -401,7 +401,6 @@ class MineSweeper:
         self.chat_manager.add_message(f"{self.player_board.get_timer_value()} vs {self.opponent_board.get_timer_value()}", from_self=True)
         self.new_game()
         self.config_control_panel_buttons(ACTIVE)
-        
         
     def on_chatManager_send_message(self, message:str):
         self.network_manager.send_message(message)
