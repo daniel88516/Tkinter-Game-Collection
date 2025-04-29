@@ -1,4 +1,5 @@
 from tkinter import * 
+from tkinter import messagebox
 import os
 from MineSweeper_Difficulty import DifficultyConfig, Difficulty
 from MineSweeper_BoardManager import BoardManager
@@ -81,7 +82,7 @@ class MineSweeper:
         self.opponent_board = BoardManager(
             self.boards_container,
             self.tile_images,
-            "你的對手",
+            "對手",
             self.config,
             self.debug_mode,
             True
@@ -117,9 +118,9 @@ class MineSweeper:
             GameMessageType.CHORD_CLICK: lambda self, msg: self.opponent_board.on_chord_click(msg.data["row"], msg.data["col"]),
             GameMessageType.CHORD_PRESS: lambda self, msg: self.opponent_board.on_chord_press(msg.data["row"], msg.data["col"]),
             GameMessageType.CHORD_RELEASE: lambda self, msg: self.opponent_board.on_chord_release(msg.data["row"], msg.data["col"]),
-            GameMessageType.GAME_OVER: lambda self, msg: self.opponent_board.game_over(),
-            GameMessageType.GAME_COMPLETE: lambda self, msg: self.opponent_board.complete(),
-            GameMessageType.RESET: lambda self, msg: self.new_game(),
+            GameMessageType.GAME_OVER: lambda self, msg: self.on_opponent_game_over(msg.data["result"]),
+            GameMessageType.GAME_COMPLETE: lambda self, msg: self.on_opponent_game_complete(msg.data["result"]),
+            GameMessageType.RESET: lambda self, msg: self.new_game(remember_ready_state=True),
             GameMessageType.CHANGE_DIFFICULTY: lambda self,msg :self.change_difficulty(msg.data["difficulty"]),
         }
    
@@ -150,7 +151,7 @@ class MineSweeper:
         self.ready_button = Button(control_frame, fg="red", text="未準備", command=self.toggle_ready_state, state=DISABLED)
         self.ready_button.pack(side=LEFT, padx=5)
         
-        self.reset_button = Button(control_frame, text="重置遊戲", command= lambda: [self.new_game(), self.send_reset_message()], state=DISABLED)
+        self.reset_button = Button(control_frame, text="重置遊戲", command= lambda: [self.new_game(remember_ready_state=True), self.send_reset_message()], state=DISABLED)
         self.reset_button.pack(side=LEFT, padx=5)
         
         self.debug_button = Button(control_frame, text="Debug 模式：關閉", command=self.toggle_debug_mode)
@@ -198,6 +199,7 @@ class MineSweeper:
             self.reset_button.config(state=ACTIVE)
             for btn in self.difficulty_buttons:
                 btn.config(state=ACTIVE)
+            self.countdown_timer.reset()
         
         message:GameMessage = GameMessage(
             type=GameMessageType.READY_STATE,
@@ -207,15 +209,18 @@ class MineSweeper:
         if self.can_start_game():
             self.player_board.countup_timer.reset()
             self.opponent_board.countup_timer.reset()
+            print("Start Countdown")
             self.countdown_timer.start_countdown()
-            
-            
+   
     def opponent_toggle_ready_state(self, ready_state:bool):
         self.opponent_board.is_ready = ready_state
         if ready_state == True:        
             self.chat_manager.add_message("對手已準備", from_self=False)
         else:
             self.chat_manager.add_message("對手未準備", from_self=False)
+            self.player_board.countup_timer.stop_countdown()
+            self.countdown_timer.reset()
+            
         if self.can_start_game():
             self.player_board.countup_timer.reset()
             self.opponent_board.countup_timer.reset()
@@ -235,10 +240,16 @@ class MineSweeper:
         for board_manager in self.board_managers:
             board_manager.update_board()
     
-    def new_game(self):
+    def new_game(self, remember_ready_state:bool=False):
         """開始新遊戲"""
+        player_ready_state = self.player_board.is_ready
+        opponent_ready_state = self.opponent_board.is_ready
         for board_manager in self.board_managers:
             board_manager.reset()
+        
+        if remember_ready_state:
+            self.player_board.is_ready = player_ready_state
+            self.opponent_board.is_ready = opponent_ready_state
                         
     def send_reset_message(self):
         """傳送重置的訊息"""
@@ -249,15 +260,16 @@ class MineSweeper:
     def change_difficulty(self, difficulty: Difficulty):
         """更改難度"""
         if self.config != DifficultyConfig(difficulty):
-            print("Not The Same")
             self.config = DifficultyConfig(difficulty)
             for board_manager in self.board_managers:
                 board_manager.change_difficulty(self.config)
             self.center_window()
+            self.config_control_panel_buttons(DISABLED)
         else: 
             # 難度不變,但需要清空場地
             self.new_game()
             self.send_reset_message() 
+            
     def send_change_difficulty_message(self, difficulty: Difficulty):
         message:GameMessage = GameMessage(GameMessageType.CHANGE_DIFFICULTY, data={"difficulty":difficulty.name})
         self.network_manager.send_game_message(message)        
@@ -288,17 +300,21 @@ class MineSweeper:
         
     def on_networkManager_server_disconnect_success(self):
         self.new_game()
+        self.chat_manager.reset()
         self.config_control_panel_buttons(DISABLED)
                 
     def on_networkManager_client_connect_success(self):
+        self.chat_manager.reset()
         self.config_control_panel_buttons(ACTIVE)
         
     def on_networkManager_client_disconnect_success(self):
         self.new_game()
+        self.chat_manager.reset()
         self.config_control_panel_buttons(DISABLED)
         
     def on_networkManager_receive_message_failed(self):
         self.new_game()
+        self.chat_manager.reset()
         self.config_control_panel_buttons(DISABLED)
     
     def config_control_panel_buttons(self, state):
@@ -350,20 +366,42 @@ class MineSweeper:
         )
         self.network_manager.send_game_message(message)
     
+    """下面的四個函數, 可以合併。"""
     def on_player_game_over(self, msg:str):
+        messagebox.showinfo(title="遊戲結果", message=msg)
         message:GameMessage = GameMessage(
             type=GameMessageType.GAME_OVER,
-            data={}
+            data={"result": "對方爆炸了!"}
         )
         self.network_manager.send_game_message(message)
-
+        self.chat_manager.add_message(f"{self.player_board.get_timer_value()} vs {self.opponent_board.get_timer_value()}")
+        self.new_game()
+        self.config_control_panel_buttons(ACTIVE)
+        
     def on_player_complete(self, msg:str):
         """處理遊戲板勝利事件"""
+        messagebox.showinfo(title="遊戲結果", message=msg)
         message:GameMessage = GameMessage(
             type=GameMessageType.GAME_COMPLETE,
-            data={"result":"對方完成了!"}
+            data={"result":" 對方完成了!"}
         )
         self.network_manager.send_game_message(message)
+        self.chat_manager.add_message(f"{self.player_board.get_timer_value()} vs {self.opponent_board.get_timer_value()}", from_self=True)
+        self.new_game()
+        self.config_control_panel_buttons(ACTIVE)
+        
+    def on_opponent_game_over(self, msg:str):
+        messagebox.showinfo(title="遊戲結果", message=msg)
+        self.chat_manager.add_message(f"{self.player_board.get_timer_value()} vs {self.opponent_board.get_timer_value()}", from_self=True)
+        self.new_game()
+        self.config_control_panel_buttons(ACTIVE)
+
+    def on_opponent_game_complete(self, msg:str):
+        messagebox.showerror(title="遊戲結果", message=msg)
+        self.chat_manager.add_message(f"{self.player_board.get_timer_value()} vs {self.opponent_board.get_timer_value()}", from_self=True)
+        self.new_game()
+        self.config_control_panel_buttons(ACTIVE)
+        
         
     def on_chatManager_send_message(self, message:str):
         self.network_manager.send_message(message)

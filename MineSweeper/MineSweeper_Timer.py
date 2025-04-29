@@ -12,13 +12,18 @@ class CountDownTimer:
         
     def create_variable(self):
         self.countdown_var:IntVar = IntVar(value=3)
+        self.after_id:int | None = None
         
     def reset(self):
         self.game_started = False
         self.countdown_var.set(3)
-                
+        if self.after_id is not None:
+            self.container.after_cancel(self.after_id)
+            self.after_id = None
+            
     def start_countdown(self):
-        self.update_countdown()
+        if self.after_id is None:
+            self.update_countdown()
 
     def update_countdown(self):
         current_time:int = self.countdown_var.get()
@@ -27,7 +32,7 @@ class CountDownTimer:
             print(msg)
             current_time = current_time - 1
             self.countdown_var.set(current_time)
-            self.container.after(1000, self.update_countdown)
+            self.after_id = self.container.after(1000, self.update_countdown)
             self.on_counter_change.emit(msg)
         else:
             msg = "開始!"
@@ -47,7 +52,7 @@ class CountUpTimer:
         
     def create_variable(self):
         self.second:int = 0
-        self.countdown_var: StringVar = StringVar(value="00:00")
+        self.countdown_var: StringVar = StringVar(value="未開始")
         self.after_id:int | None = None
         
     def reset(self):

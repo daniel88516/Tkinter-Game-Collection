@@ -49,7 +49,6 @@ class BoardManager:
         self.flagged_count:int = 0
         self.countup_timer = CountUpTimer(self.board_frame)
 
-
     def create_events(self):
         self.on_first_reveal_cell:MyEvent = MyEvent()
         self.on_reveal_cell:MyEvent = MyEvent()
@@ -62,8 +61,8 @@ class BoardManager:
         # 當第一次揭開格子時, 啟動計時器
         self.on_first_reveal_cell.subscribe(lambda r,c,seed: self.start_timer())
         # 遊戲結束或重置時, 停止並重置計時器
-        self.on_game_over.subscribe(lambda msg: self.stop_timer())
-        self.on_complete.subscribe(lambda msg: self.stop_timer())
+        self.on_game_over.subscribe(lambda *args, **kwargs: self.stop_timer())
+        self.on_complete.subscribe(lambda *args, **kwargs: self.stop_timer())
 
     def create_ui(self):
         """創建 UI"""
@@ -85,6 +84,9 @@ class BoardManager:
 
     def stop_timer(self):
         self.countup_timer.stop_countdown()
+
+    def get_timer_value(self):
+        return self.countup_timer.countdown_var.get()
 
     def reset(self):
         """重置遊戲板"""
@@ -235,25 +237,14 @@ class BoardManager:
         self.update_board()
         self.on_chord_click(r, c)
     
-    def game_over(self):
-        """你爆炸了"""
-        self.is_game_over = True
-        msg = f"遊戲結束{self.name} 踩到地雷了！"
-        self.on_game_over.emit(msg)
-        self.reveal_all_mines()
-    
     def check_win_condition(self):
         """勝利唾手可得"""
         for r in range(self.gameBoard.height):
             for c in range(self.gameBoard.width):
                 cell = self.gameBoard.get_cell(r, c)
                 if not cell.is_mine() and not cell.revealed:
-                    return
-                    
-        self.is_game_over = True
-        msg = f"恭喜,{self.name}贏了!"
+                    return                    
         self.complete()
-        self.on_complete.emit(msg)
     
     def reveal_all_mines(self):
         """顯示所有地雷"""
@@ -290,10 +281,18 @@ class BoardManager:
                     else:
                         img = self.tile_images["TileUnknown"]
                 btn.config(image=img)
-    
+
+    def game_over(self):
+        """你爆炸了"""
+        self.is_game_over = True
+        msg = f"遊戲結束{self.name} 踩到地雷了！"
+        self.reveal_all_mines()
+        self.on_game_over.emit(msg)
+        
     def complete(self):
         self.is_game_over = True
-        print("COMPLETE")
+        msg = f"{self.name}贏了!"
+        self.on_complete.emit(msg)
     
     def change_difficulty(self, config: DifficultyConfig):
         """更改難度"""

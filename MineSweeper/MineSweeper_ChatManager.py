@@ -155,6 +155,13 @@ class ChatManager:
         self.entry.delete(0, "end")
         self.on_send_message.emit(msg)
 
+    def reset(self):
+        # 清除 messages_frame 中的所有子元件
+        for widget in self.messages_frame.winfo_children():
+            widget.destroy()
+        # 重置 Canvas 的 scrollregion
+        self.canvas.configure(scrollregion=self.canvas.bbox("all"))
+        
 if __name__=="__main__":
     window:Tk = Tk()
     chat_manager = ChatManager()
