@@ -31,7 +31,7 @@ class MineSweeper:
         
     def load_images(self):
         """把圖片加載進來, 之後可透過環境變數簡化"""
-        base_path = os.path.join(os.path.dirname(__file__), f"Images")
+        base_path = os.path.join(os.path.dirname(__file__), f"Images/")
         self.tile_images = {}
         for i in range(1, 9):
             self.tile_images[f"Tile{i}"] = PhotoImage(file=os.path.join(base_path, f"Tile{i}.png"))

@@ -41,13 +41,14 @@ class GameMenu:
         self.tree.pack(fill="both", expand=True, padx=40, pady=20)
 
         # 遊戲清單
+        base_path = os.path.dirname(__file__)
         self.games = {
-            "Zombie": "Z_main.py",
-            "Monty Hall": "ThreeHall.py",
-            "井字遊戲": "TicTacToe.py",
-            "踩地雷(單人版)": "MineSweeper_SinglePlayer.py",
+            "Zombie": os.path.join(base_path, "Z_main.py"),
+            "Monty Hall": os.path.join(base_path, "ThreeHall.py"),
+            "井字遊戲": os.path.join(base_path, "TicTacToe.py"),
+            "踩地雷(單人版)": os.path.join(base_path, "MineSweeper_SinglePlayer.py"),
+            "踩地雷(多人版)": os.path.join(base_path, "MineSweeper", "MineSweeper.py")
         }
-
         for name in self.games:
             self.tree.insert("", "end", values=(name,))
 
