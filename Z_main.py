@@ -1,6 +1,5 @@
 from tkinter import *
 from tkinter.ttk import Notebook
-from Zombie import Zombie
 from Zombie_rand import RankingPage
 from CanvasZombie import CanvasZombie
 
