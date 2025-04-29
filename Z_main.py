@@ -2,21 +2,25 @@ from tkinter import *
 from tkinter.ttk import Notebook
 from Zombie import Zombie
 from Zombie_rand import RankingPage
+from CanvasZombie import CanvasZombie
 
 class ZMain(Frame):
     def __init__(self, root):
         super().__init__(root)
         self.root = root
 
-        # 設定視窗大小與置中
+        # 先設定希望縮小後的置中座標
         screen_width = self.root.winfo_screenwidth()
         screen_height = self.root.winfo_screenheight()
-        w, h = 700, 800
+        w, h = 1080,900  # 妳希望視窗還原時的大小
         x = (screen_width - w) // 2
         y = (screen_height - h) // 2
+
+        # 先設定 geometry，但等會被 zoomed 蓋掉沒關係
         self.root.geometry(f"{w}x{h}+{x}+{y}")
-        self.root.configure(bg="white")
-        self.root.title("ShotZombie")
+
+        # 再設定最大化
+        self.root.state("zoomed")
 
         self.pack(fill="both", expand=True)
 
@@ -25,9 +29,9 @@ class ZMain(Frame):
         self.notebook.pack(expand=True, fill="both")
 
         # Zombie 遊戲頁面
-        self.zombie_page = Zombie(self.notebook)
+        self.zombie_page = CanvasZombie(self.notebook)
         self.zombie_page.pack(fill="both", expand=True)
-        self.notebook.add(self.zombie_page, text="🧟 Zombie")
+        self.notebook.add(self.zombie_page, text="🧟 CanvasZombie")
 
         # 排行榜頁面
         self.ranking_page = RankingPage(self.notebook)
@@ -38,7 +42,7 @@ class ZMain(Frame):
     def on_tab_changed(self, event):
         current_tab = event.widget.select()
         selected_widget = event.widget.nametowidget(current_tab)
-        if isinstance(selected_widget, Zombie):
+        if isinstance(selected_widget, (Zombie, CanvasZombie)):
             selected_widget.focus_set()
 
 # main

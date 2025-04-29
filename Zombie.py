@@ -22,7 +22,8 @@ class Zombie(Frame):
         self.combo = 0 #連擊
         self.after_id = None 
         self.current_zombie_images = [[None]*self.LANE_COUNT for _ in range(self.MAX_ROWS)]
-
+        self.raiden_x  ,  self.raiden_y = 70  , 100
+        self.qiqi_right_padding = 50  # 七七右邊空隙
 
 
         self.setup_ui()
@@ -30,6 +31,35 @@ class Zombie(Frame):
         self.bind("<KeyPress>", self.key_handler)
         self.focus_set()
         #self.root.after_idle(self.show_db_status)  #顯示資料庫以成功連接，目前不顯示
+
+        self.bind("<Configure>", self.on_window_resize)
+
+
+        #傷人的話
+        self.qiqi_quotes = [
+            "連這也打不到……？",
+            "你好遜喔……我要睡覺了。",
+            "是不是該換人玩了？",
+            "我失望了。",
+            "我以為你會比較厲害……結果也不過如此。",
+            "這麼簡單，也失敗了嗎？",
+            "……我沒什麼好說的了。",
+            "你在浪費我的復活時間。",
+            "我要記錄下來，提醒自己不要再相信你了。",
+            "……你真的有在看嗎？"
+        ]
+        self.raiden_quotes = [
+            "就這？",
+            "垃圾。",
+            "弱得讓人想睡覺。",
+            "真是浪費我的時間。",
+            "你的無能讓我感到羞恥。",
+            "你也配稱作戰士？",
+            "蠢貨。",
+            "這樣也敢站在我面前？",
+            "倒不如自己了解自己的極限吧。",
+            "離開吧，在你更丟人之前。"
+        ]
 
 
     def center_window(self, win, width=250, height=150):
@@ -58,29 +88,68 @@ class Zombie(Frame):
         
     def load_img(self):
         # 載入七七
+        qiqi_size_x, qiqi_size_y = 290, 290
         img_path = os.path.join(os.path.dirname(__file__), "Zombie圖片/七七.png")
         img = Image.open(img_path)
-        img = img.resize((180, 180), Image.Resampling.LANCZOS)
+        img = img.resize((qiqi_size_x, qiqi_size_y), Image.Resampling.LANCZOS)
         self.qiqi_img = ImageTk.PhotoImage(img)
 
         self.qiqi_label = Label(self, image=self.qiqi_img, bg=self["bg"], borderwidth=0)
 
+        self.qiqi_width = qiqi_size_x  
+
         self.update_idletasks()
-        window_width = self.winfo_width()
-        x_pos = window_width - 180 - 10  # 右邊邊距
+        window_width = self.winfo_width() or 1920
+        x_pos = window_width - self.qiqi_width - self.qiqi_right_padding 
         self.qiqi_label.place(x=x_pos, y=50)
 
         # 載入雷電將軍
+        raiden_size_x, raiden_size_y = 210, 210
         img_path = os.path.join(os.path.dirname(__file__), "Zombie圖片/雷電將軍.png")
         img = Image.open(img_path)
-        img = img.resize((140, 140), Image.Resampling.LANCZOS)
+        img = img.resize((raiden_size_x, raiden_size_y), Image.Resampling.LANCZOS)
         self.raiden_img = ImageTk.PhotoImage(img)
 
         self.raiden_label = Label(self, image=self.raiden_img, bg=self["bg"], borderwidth=0)
-        self.raiden_label.place(x=30, y=80)  # 左上角
+        self.raiden_label.place(x = self.raiden_x, y = self.raiden_y)
+
+        # 七七的對話框
+        self.qiqi_text = Label(
+            self,
+            text="",
+            font=("微軟正黑體", 20, "bold"),
+            bg=self["bg"],
+            fg="#BB00FF",
+            wraplength=300,    
+            justify="center"     
+        )
+        self.qiqi_text.place(x=x_pos - 300, y=330)
+
+        # 雷電將軍的對話框
+        self.raiden_text = Label(
+            self,
+            text="",
+            font=("微軟正黑體", 20, "bold"),
+            bg=self["bg"],
+            fg="#0000CC",
+            wraplength=300,    
+            justify="center"     
+        )
+        self.raiden_text.place(x=30, y=330)
 
 
     def setup_ui(self):
+
+        """
+        #設定背景
+        bg_path = os.path.join(os.path.dirname(__file__), "Zombie圖片/背景.jpg")  
+        bg_img = Image.open(bg_path)
+        bg_img = bg_img.resize((1920, 1080), Image.Resampling.LANCZOS)  
+        self.bg_img = ImageTk.PhotoImage(bg_img) 
+
+        self.bg_label = Label(self, image=self.bg_img)
+        self.bg_label.place(x=0, y=0, relwidth=1, relheight=1)  
+        """
 
         #載入七七跟雷電
         self.load_img()
@@ -112,11 +181,11 @@ class Zombie(Frame):
         # 建立 zombie image list
         self.zombie_imgs = []
         for path in zombie_paths:
-            img = Image.open(path).resize((100, 100), Image.Resampling.LANCZOS)
+            img = Image.open(path).resize((150, 150), Image.Resampling.LANCZOS)
             self.zombie_imgs.append(ImageTk.PhotoImage(img))
 
         # 載入空格圖
-        blank_img = Image.open(blank_path).resize((100, 100), Image.Resampling.LANCZOS)
+        blank_img = Image.open(blank_path).resize((150, 150), Image.Resampling.LANCZOS)
         self.blank_img = ImageTk.PhotoImage(blank_img)
 
         # 殭屍格框
@@ -140,7 +209,7 @@ class Zombie(Frame):
             for c in range(self.LANE_COUNT):
                 self.labels[r][c].grid(row=r, column=c, padx=5, pady=2)
 
-        """
+
         # 炮臺
         self.turrets = [
             Label(frame, text="💥", width=5, height=1, font=("Arial", 25),
@@ -150,12 +219,12 @@ class Zombie(Frame):
      
         for c in range(self.LANE_COUNT):
             self.turrets[c].grid(row=self.MAX_ROWS, column=c, padx=5, pady=(5, 0))
-        """
+
 
 
         # 開始按鈕
-        self.start_button = Button(self, text="開始", font=("Arial", 12), width=10, height=2, command=self.ask_game_duration)
-        self.start_button.pack(side=RIGHT, padx=20, pady=10)
+        self.start_button = Button(self, text="開始", font=("微軟正黑體", 12), width=10, height=2, command=self.ask_game_duration)
+        self.start_button.place(relx=0.88, rely=0.85)
         self.start_button.focus_set()
         self.bind("<Return>", lambda e: self.ask_game_duration())
 
@@ -168,9 +237,13 @@ class Zombie(Frame):
 
     #為了拯救七七
     def on_window_resize(self, event):
-        if hasattr(self, 'qiqi_label'):
-            x_pos = self.winfo_width() - 180 - 10  # 固定右邊距離
+        if hasattr(self, 'qiqi_label') and hasattr(self, 'qiqi_width'):
+            x_pos = self.winfo_width() - self.qiqi_width - self.qiqi_right_padding 
             self.qiqi_label.place(x=x_pos, y=50)
+
+            # 七七對話框
+            if hasattr(self, 'qiqi_text'):
+                self.qiqi_text.place(x=x_pos, y=330)
             
     def setup_database(self):
         try:
@@ -252,7 +325,7 @@ class Zombie(Frame):
         self.score = 0
         self.can_shoot = False
         self.game_running = False
-        self.rows = [random.randint(0, 2) for _ in range(self.MAX_ROWS)]
+        self.rows = [random.randint(0, self.LANE_COUNT - 1) for _ in range(self.MAX_ROWS)]
         self.timer_label.config(text="剩餘時間: 30 秒" , fg = self.get_contrasting_color(self["bg"]) )
         self.score_label.config(text="分數: 0", fg = self.get_contrasting_color(self["bg"]) )
         self.status_label.config(text="準備中...", fg="orange")
@@ -311,8 +384,8 @@ class Zombie(Frame):
 
         target = self.rows[-1]
         if column == target:
-            self.combo += 1  # Combo +1
-            points = int(1.1 ** self.combo)  # 指數加分!!!!!!!!!!!!!!!!
+            self.combo += 1
+            points = int(1.1 ** self.combo)
             self.score += points
 
             self.status_label.config(
@@ -320,27 +393,46 @@ class Zombie(Frame):
             )
 
             self.rows.pop()
-            self.rows.insert(0, random.randint(0, 2))
+            self.rows.insert(0, random.randint(0, self.LANE_COUNT - 1))
             self.score_label.config(text=f"分數: {self.score}")
             self.draw_rows()
 
         else:
-            self.combo = 0  # Combo 歸零
+            self.combo = 0
             self.status_label.config(text="MISS! 懲罰 1 秒", fg="red")
             self.can_shoot = False
             self.draw_rows(error_row=self.MAX_ROWS - 1)
-            self.after(1000, self.reset_penalty)
+
+            # 當下立刻顯示講話
+            qiqi_say = random.choice(self.qiqi_quotes)
+            raiden_say = random.choice(self.raiden_quotes)
+
+            self.qiqi_text.config(text=qiqi_say)
+            self.raiden_text.config(text=raiden_say)
+
+            # 只安排 1秒後，同時清空狀態和對話
+            self.after(1000, self.reset_penalty_and_clear)
 
 
-    def reset_penalty(self):
+    def reset_penalty_and_clear(self):
         self.can_shoot = True
         self.status_label.config(text="")
         self.draw_rows()
+        self.qiqi_text.config(text="")  
+        self.raiden_text.config(text="")  
 
     def key_handler(self, event):
-        key_map = {'Left': 0, 'Down': 1, 'Right': 2}
-        if event.keysym in key_map:
-            self.shoot(key_map[event.keysym])
+        # 支援任意 LANE_COUNT 的鍵位
+        if self.LANE_COUNT == 3:
+            key_pool = ['Left', 'Down', 'Right']
+        else:
+            key_pool = ['A', 'S', 'D', 'Left', 'Down', 'Right']
+        key_map = {key_pool[i]: i for i in range(min(self.LANE_COUNT, len(key_pool)))}
+
+        key = event.keysym.upper() if len(event.keysym) == 1 else event.keysym  # 小寫轉大寫
+
+        if key in key_map:
+            self.shoot(key_map[key])
 
     def prompt_save_score(self, score, time_mode):
         if time_mode not in [30, 60]:
@@ -424,6 +516,8 @@ class Zombie(Frame):
 
 # main
 if __name__ == "__main__":
+
+    """
     def center_root(win, w=700, h=800):
         win.update_idletasks()
         screen_width = win.winfo_screenwidth()
@@ -431,6 +525,18 @@ if __name__ == "__main__":
         x = (screen_width - w) // 2
         y = (screen_height - h) // 2
         win.geometry(f"{w}x{h}+{x}+{y}")
+    """
+    
+    def center_root(win, w=1080, h=900):
+        screen_width = win.winfo_screenwidth()
+        screen_height = win.winfo_screenheight()
+        x = (screen_width - w) // 2
+        y = (screen_height - h) // 2
+
+        # 還原時會置中
+        win.geometry(f"{w}x{h}+{x}+{y}")
+        # 啟動就最大化
+        win.state("zoomed")
 
     root = Tk()
     root.title("ShotZombie - 終極鍵盤版")

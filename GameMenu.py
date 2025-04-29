@@ -6,24 +6,39 @@ from PIL import Image, ImageTk
 
 class GameMenu:
     def __init__(self):
+        
+
         # 建立主視窗
         self.window = Tk()
         self.window.title("Game Menu")
+        self.window.configure(bg="black")
+        self.window.resizable(True, True)
+
         screen_width = self.window.winfo_screenwidth()
         screen_height = self.window.winfo_screenheight()
-        w, h = 600, 800
+        w, h = 1080, 900
         x, y = (screen_width - w) // 2, (screen_height - h) // 2
         self.window.geometry(f"{w}x{h}+{x}+{y}")
-        self.window.configure(bg="black")
-        self.window.resizable(False, False)
+
+
 
         # 載入圖片當標題
         base_path = os.path.dirname(__file__)
         img_path = os.path.join(base_path, "GameMenu圖片", "GTA6.webp")
-        original_img = Image.open(img_path).resize((400, 200))
+        original_img = Image.open(img_path).resize((600, 345))
         self.banner_img = ImageTk.PhotoImage(original_img)
         banner_label = Label(self.window, image=self.banner_img, bg="black")
         banner_label.pack(pady=10)
+
+        # 中央內容容器（限制 TreeView 尺寸）
+        content_frame = Frame(self.window, bg="black", width=700, height=400)
+        content_frame.pack(pady=20)
+        content_frame.pack_propagate(False)  # 禁止根據內容自動壓縮尺寸
+
+        # 控制 Treeview 的最大寬度
+        max_width = 800  
+        content_frame.configure(width=max_width)
+        content_frame.pack_propagate(False)
 
         # TreeView 樣式設定
         style = ttk.Style()
@@ -54,10 +69,10 @@ class GameMenu:
         )
 
         # 建立 TreeView
-        self.tree = ttk.Treeview(self.window, show="headings", columns=("game",), height=6)
+        self.tree = ttk.Treeview(content_frame, show="headings", columns=("game",), height=10)
         self.tree.heading("game", text="遊戲清單")
         self.tree.column("game", anchor="center")
-        self.tree.pack(fill="both", expand=True, padx=40, pady=20)
+        self.tree.pack(fill="both", expand=False, padx=40, pady=20)
         self.tree.tag_configure('hover', background="#555555")  
 
 
