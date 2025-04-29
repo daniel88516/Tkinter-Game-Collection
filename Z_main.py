@@ -41,7 +41,7 @@ class ZMain(Frame):
     def on_tab_changed(self, event):
         current_tab = event.widget.select()
         selected_widget = event.widget.nametowidget(current_tab)
-        if isinstance(selected_widget, (Zombie, CanvasZombie)):
+        if isinstance(selected_widget, (CanvasZombie, CanvasZombie)):
             selected_widget.focus_set()
 
 # main
