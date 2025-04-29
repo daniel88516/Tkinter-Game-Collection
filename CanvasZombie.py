@@ -136,6 +136,14 @@ class CanvasZombie(tk.Frame):
         self.button_rect = self.canvas.create_rectangle(w - 220, h - 100, w - 40, h - 40, fill="purple")
         self.button_text = self.canvas.create_text(w - 130, h - 70, text="開始", font=self.large_font, fill="plum1")
 
+        #預留一個空的圖片物件放在畫面正中央。
+        self.countdown_image_id = self.canvas.create_image(
+            self.winfo_width() // 2,
+            self.winfo_height() // 2,
+            anchor="center",
+            image=None
+        )
+
     
     def load_images(self):
         base = os.path.dirname(__file__)
@@ -164,6 +172,12 @@ class CanvasZombie(tk.Frame):
         self.raiden_img = load("Zombie圖片/雷電將軍.png", (240, 240))
         self.time_icon = load("Zombie圖片/時間.png", (80, 80))
         self.score_icon = load("Zombie圖片/分數.png", (80, 80))
+
+        self.countdown_imgs = [
+            load("Zombie圖片/3.png", (400, 400)),
+            load("Zombie圖片/2.png", (400, 400)),
+            load("Zombie圖片/1.png", (400, 400)),
+        ]
         
     def setup_db(self):
         db_path = os.path.join(os.path.dirname(__file__), "zombie_rand.db")
@@ -253,6 +267,15 @@ class CanvasZombie(tk.Frame):
             self.after_cancel(self.countdown_job)
             self.countdown_job = None
 
+
+        # 重建 countdown image 物件
+        self.countdown_image_id = self.canvas.create_image(
+            self.winfo_width() // 2,
+            self.winfo_height() // 2,
+            anchor="center",
+            image=None
+        )
+
         self.rows = [random.randint(0, self.LANE_COUNT - 1) for _ in range(self.MAX_ROWS)]
         for r in range(self.MAX_ROWS):
             for c in range(self.LANE_COUNT):
@@ -264,16 +287,28 @@ class CanvasZombie(tk.Frame):
         self.update_texts()
         self.draw_rows()  
 
-        self.canvas.itemconfig(self.status_text_id, text="3")
-        self.countdown_animation_jobs.append(self.after(1000, lambda: self.canvas.itemconfig(self.status_text_id, text="2")))
-        self.countdown_animation_jobs.append(self.after(2000, lambda: self.canvas.itemconfig(self.status_text_id, text="1")))
+        self.canvas.itemconfig(self.status_text_id, text="")  # 清空文字
+        self.canvas.itemconfig(self.countdown_image_id, image=self.countdown_imgs[0])  # 3
+        self.canvas.tag_raise(self.countdown_image_id) 
+        self.countdown_animation_jobs.append(self.after(1000, lambda: self.canvas.itemconfig(self.countdown_image_id, image=self.countdown_imgs[1])))  # 2
+        self.countdown_animation_jobs.append(self.after(2000, lambda: self.canvas.itemconfig(self.countdown_image_id, image=self.countdown_imgs[2])))  # 1
         self.countdown_animation_jobs.append(self.after(3000, self.start_game))
 
 
+
     def start_game(self):
+    
+         # 清除倒數圖片並刷新畫面
+        def clear_countdown_image():
+            self.canvas.delete(self.countdown_image_id)
+            self.canvas.update_idletasks()
+
+        self.after(1,clear_countdown_image)
+
         if self.countdown_job:
             self.after_cancel(self.countdown_job)
             self.countdown_job = None
+
         self.game_running = True
         self.can_shoot = True
         self.time_left = self.game_time
@@ -297,6 +332,7 @@ class CanvasZombie(tk.Frame):
             self.canvas.tag_raise(self.status_text_id) #"時間到"浮到上面
             self.canvas.itemconfig(self.big_timer_text_id, text="")  # 大時間清空！
             self.prompt_save_score(self.score, self.game_time)
+    
 
     def draw_rows(self):
         canvas_w = self.winfo_width()
@@ -339,6 +375,7 @@ class CanvasZombie(tk.Frame):
             self.draw_rows()
         else:
             self.combo = 0
+            self.miss_zombie_jump()
             #self.canvas.itemconfig(self.status_text_id, text="MISS! 懲罰 1 秒", fill="red")
             self.canvas.itemconfig(self.qiqi_text_id, text=random.choice(self.qiqi_quotes))
             self.canvas.itemconfig(self.raiden_text_id, text=random.choice(self.raiden_quotes))
@@ -449,6 +486,32 @@ class CanvasZombie(tk.Frame):
         self.setup_canvas_elements()  # 重建分數、時間、角色圖、按鈕
         if self.game_running:  # 如果遊戲正在跑，才重畫 rows
             self.draw_rows()
+    
+    def miss_zombie_jump(self):
+        row = self.MAX_ROWS - 1
+        col = self.rows[-1]
+        zombie_id = self.current_zombie_ids[row][col]
+
+        if not zombie_id:
+            return
+
+        total_duration = 1000  # ms
+        fps = 60
+        steps = int(total_duration / (1000 / fps))  # 約 60 幀
+        height = 50
+
+        def easing(t):
+            # 使用簡單的拋物線公式，t ∈ [0,1]
+            return -4 * height * (t - 0.5) ** 2 + height
+
+        for i in range(steps + 1):
+            t = i / steps
+            delta = -easing(t)  # 產生一個「跳」的曲線位移
+            self.after(int(i * (1000 / fps)), lambda d=delta: self.canvas.coords(
+                zombie_id,
+                self.canvas.coords(zombie_id)[0],
+                120 + row * self.row_height + d
+            ))
 
 if __name__ == "__main__":
     root = tk.Tk()
