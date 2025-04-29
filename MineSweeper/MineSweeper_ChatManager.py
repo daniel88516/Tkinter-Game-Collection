@@ -9,6 +9,9 @@ class ChatManager:
 
     def create_variable(self):
         self.entry_var:StringVar = StringVar()
+        
+        self.after_id = None
+        self.is_image_cooling_down = False
 
     def create_events(self):
         self.on_send_message:MyEvent = MyEvent()
@@ -159,7 +162,8 @@ class ChatManager:
         """傳送圖片"""
         self.add_message(image_path, from_self=True, is_image=True)
         self.on_send_image.emit(image_path)
-        
+        self.start_image_cooldown()
+    
     def add_message(self, content, from_self, is_image=False):
         """新增訊息，支援文字和圖片"""
         # 一定要讓 message_frame 填滿寬度
@@ -231,11 +235,23 @@ class ChatManager:
             widget.destroy()
         # 重置 Canvas 的 scrollregion
         self.canvas.configure(scrollregion=self.canvas.bbox("all"))
+        if self.after_id: 
+            self.parent_frame.after_cancel(self.after_id)
     
     def config_buttons(self, state):
         for btn in self.sticker_btns:
             btn.config(state=state)
-            
+    
+    def start_image_cooldown(self):
+        self.is_image_cooling_down = True
+        self.config_buttons(state=DISABLED)
+        self.after_id = self.parent_frame.after(2000, self.end_image_cooldown)
+    
+    def end_image_cooldown(self):
+        self.is_image_cooling_down = False
+        self.config_buttons(state=ACTIVE)
+        self.after_id = None
+    
 if __name__=="__main__":
     window:Tk = Tk()
     chat_manager = ChatManager()

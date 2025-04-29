@@ -298,29 +298,35 @@ class MineSweeper:
         self.change_difficulty(Difficulty.EASY)
         self.send_change_difficulty_message(Difficulty.EASY)
         self.config_control_panel_buttons(ACTIVE)
+        self.chat_manager.config_buttons(ACTIVE)
         
     def on_networkManager_server_disconnect_success(self):
         self.new_game()
         self.chat_manager.reset()
         self.config_control_panel_buttons(DISABLED)
+        self.chat_manager.config_buttons(DISABLED)
                 
     def on_networkManager_client_connect_success(self):
         self.chat_manager.reset()
         self.config_control_panel_buttons(ACTIVE)
+        self.chat_manager.config_buttons(ACTIVE)
+
         
     def on_networkManager_client_disconnect_success(self):
         self.new_game()
         self.chat_manager.reset()
         self.config_control_panel_buttons(DISABLED)
+        self.chat_manager.config_buttons(DISABLED)
         
     def on_networkManager_receive_message_failed(self):
         self.new_game()
         self.chat_manager.reset()
         self.config_control_panel_buttons(DISABLED)
+        self.chat_manager.config_buttons(DISABLED)
+
     
     def config_control_panel_buttons(self, state):
         self.ready_button.config(text="未準備", fg="red", state=state)
-        self.chat_manager.config_buttons(state=state)
         self.reset_button.config(state=state)
         for btn in self.difficulty_buttons:
             btn.config(state=state)
@@ -420,6 +426,7 @@ class MineSweeper:
         for gameBoard in self.board_managers:
             gameBoard.is_game_started = True
         self.config_control_panel_buttons(DISABLED)
+
         
 # main
 if __name__ == "__main__":
