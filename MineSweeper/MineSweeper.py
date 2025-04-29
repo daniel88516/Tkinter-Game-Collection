@@ -41,7 +41,7 @@ class MineSweeper:
         
     def load_images(self):
         """加載圖片"""
-        base_path = os.path.join(os.path.dirname(__file__), f"Images")
+        base_path = os.path.join(os.path.dirname(__file__), f"Images/MineSweeper/")
         self.tile_images = {}
         for i in range(1, 9):
             self.tile_images[f"Tile{i}"] = PhotoImage(file=os.path.join(base_path, f"Tile{i}.png"))
@@ -122,6 +122,7 @@ class MineSweeper:
             GameMessageType.GAME_COMPLETE: lambda self, msg: self.on_opponent_game_complete(msg.data["result"]),
             GameMessageType.RESET: lambda self, msg: self.new_game(remember_ready_state=True),
             GameMessageType.CHANGE_DIFFICULTY: lambda self,msg :self.change_difficulty(msg.data["difficulty"]),
+            GameMessageType.IMAGE: lambda self, msg: self.chat_manager.add_message(msg.data["image_path"], from_self=False, is_image=True)
         }
    
     def create_counter_eventHandler(self):
@@ -168,6 +169,7 @@ class MineSweeper:
         
     def create_chat_eventHandler(self):
         self.chat_manager.on_send_message.subscribe(self.on_chatManager_send_message)
+        self.chat_manager.on_send_image.subscribe(self.on_chatManager_send_image)
         
     def center_window(self):
         """調整視窗大小和位置"""
@@ -177,7 +179,7 @@ class MineSweeper:
         # 計算視窗大小
         board_width = self.config.board_width * 32
         total_width = board_width * len(self.board_managers) + 250 + (20 * (len(self.board_managers) - 1))
-        height = self.config.board_height * 32 + 350
+        height = self.config.board_height * 32 + 400
         
         screen_width = self.window.winfo_screenwidth()
         screen_height = self.window.winfo_screenheight()
@@ -404,6 +406,13 @@ class MineSweeper:
         
     def on_chatManager_send_message(self, message:str):
         self.network_manager.send_message(message)
+    
+    def on_chatManager_send_image(self, image_path:str):
+        message:GameMessage = GameMessage(
+            type=GameMessageType.IMAGE,
+            data={"image_path":image_path}
+        )
+        self.network_manager.send_game_message(message)
 
     def on_timer_count_change(self, msg:str):
         self.network_manager.send_message(msg)

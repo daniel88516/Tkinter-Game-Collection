@@ -224,30 +224,6 @@ class NetworkManager:
         except Exception as e:
             print(f"NetworkManager: 放入訊息失敗: {str(e)}")
             
-    # def receive_message(self):
-    #     """接收訊息"""
-    #     while self.connection_status:
-    #         try:
-    #             message = self.client_socket.recv(1024).decode('utf-8')
-    #             if not message:
-    #                 break
-    #             try:
-    #                 game_message = GameMessage.from_json(message)
-    #                 print(f"NetworkManager: 收到遊戲訊息: {game_message}")
-    #                 self.recv_queue.put(game_message)
-    #             except json.JSONDecodeError:
-    #                 self.recv_queue.put(message)
-    #         except Exception as e:
-    #             # 遠端主機強制關閉現存的連線
-    #             self.receive_message_failed(e)
-    #             print(f"NetworkManager: 接收訊息失敗: {str(e)}")
-    #             break
-    #     if self.is_server_running == False:
-    #         self.stop_server()
-    #         print("NetworkManager: 伺服器關閉")
-    #     else:
-    #         self.disconnect()
-    #         print("NetworkManager: 客戶端斷線")
     def receive_message(self):
         buffer = ""
         while self.connection_status:

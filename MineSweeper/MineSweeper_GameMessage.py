@@ -15,7 +15,8 @@ class GameMessageType(Enum):
     GAME_COMPLETE = auto()
     RESET = auto()
     CHANGE_DIFFICULTY = auto()
-
+    IMAGE = auto()
+    
 @dataclass
 class GameMessage:
     type: GameMessageType

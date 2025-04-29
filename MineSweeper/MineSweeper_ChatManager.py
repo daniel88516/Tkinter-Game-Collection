@@ -1,4 +1,6 @@
 from tkinter import *
+from tkinter import filedialog
+from PIL import Image, ImageTk
 from MineSweeper_Event import MyEvent
 
 class ChatManager:
@@ -11,8 +13,9 @@ class ChatManager:
 
     def create_events(self):
         self.on_send_message:MyEvent = MyEvent()
-
-    def create_widget(self, parent_frame:Frame):
+        self.on_send_image:MyEvent = MyEvent()
+        
+    def create_widget(self, parent_frame: Frame):
         self.parent_frame = parent_frame
 
         # 聊天區整體容器
@@ -105,39 +108,105 @@ class ChatManager:
             side="left",
             fill="x",
             expand=True,
-            padx=(0,5)
+            padx=(0, 5)
         )
 
         self.send_btn = Button(
             bottom_frame,
             text="傳送",
             command=self.send_message,
-            state="disabled"
+            state=DISABLED
         )
         self.send_btn.pack(
             side="left"
         )
 
-    def add_message(self, text, from_self):
+        # 新增圖片按鈕區域
+        image_button_frame = Frame(chat_input_frame)
+        image_button_frame.pack(
+            side="bottom",
+            fill="x",
+            padx=5,
+            pady=5
+        )
+
+        # 載入圖片並新增按鈕
+        self.image_buttons = []
+        self.image_paths = [
+            "Images/MineSweeper/Tile1.png",
+            "Images/MineSweeper/Tile2.png",
+            "Images/MineSweeper/Tile3.png",
+            "Images/MineSweeper/Tile4.png",
+        ]
+        for image_path in self.image_paths:
+            try:
+                img = Image.open(image_path)
+                img.thumbnail((50, 50))  # 縮小圖片作為按鈕預覽
+                photo = ImageTk.PhotoImage(img)
+
+                btn = Button(
+                    image_button_frame,
+                    image=photo,
+                    command=lambda path=image_path: self.send_image(path)
+                )
+                btn.image = photo  # 防止圖片被垃圾回收
+                btn.pack(side="left", padx=5)
+                self.image_buttons.append(btn)
+            except Exception as e:
+                print(f"無法載入圖片 {image_path}: {e}")  
+    
+    def send_image(self, image_path):
+        """傳送圖片"""
+        self.add_message(image_path, from_self=True, is_image=True)
+        self.on_send_image.emit(image_path)
+        
+    def add_message(self, content, from_self, is_image=False):
+        """新增訊息，支援文字和圖片"""
         # 一定要讓 message_frame 填滿寬度
         message_frame = Frame(self.messages_frame)
         message_frame.pack(
             side="top",
-            fill="x",      # 撐滿整行
+            fill="x",  # 撐滿整行
             pady=2
         )
 
-        label = Label(
-            message_frame,
-            text=text,
-            wraplength=200,
-            justify=LEFT,
-            bg="#95EC69" if from_self else "#DDDDDD",
-            padx=10,
-            pady=5,
-            relief="solid",
-            borderwidth=1
-        )
+        if is_image:
+            # 圖片顯示
+            try:
+                img = Image.open(content)
+                img.thumbnail((200, 200))  # 縮放圖片大小
+                photo = ImageTk.PhotoImage(img)
+                label = Label(
+                    message_frame,
+                    image=photo,
+                    padx=10,
+                    pady=5,
+                )
+                label.image = photo  # 防止圖片被垃圾回收
+            except Exception as e:
+                label = Label(
+                    message_frame,
+                    text=f"圖片載入失敗: {e}",
+                    wraplength=200,
+                    justify=LEFT,
+                    bg="#FFCCCC",
+                    padx=10,
+                    pady=5,
+                    relief="solid",
+                    borderwidth=1
+                )
+        else: # 文字
+            label = Label(
+                message_frame,
+                text=content,
+                wraplength=200,
+                justify=LEFT,
+                bg="#95EC69" if from_self else "#DDDDDD",
+                padx=10,
+                pady=5,
+                relief="solid",
+                borderwidth=1
+            )
 
         # 依 from_self 決定 side
         label.pack(
@@ -145,13 +214,14 @@ class ChatManager:
             padx=10
         )
         # 新增完訊息就滑到底
-        self.canvas.after(100, lambda:self.canvas.yview_moveto(1.0))
+        self.canvas.after(100, lambda: self.canvas.yview_moveto(1.0))
 
     def send_message(self):
         msg = self.entry.get().strip()
         if not msg:
             return
-        self.add_message(msg, from_self=True)
+        # 傳送文字訊息
+        self.add_message(msg, from_self=True)  
         self.entry.delete(0, "end")
         self.on_send_message.emit(msg)
 
@@ -166,4 +236,5 @@ if __name__=="__main__":
     window:Tk = Tk()
     chat_manager = ChatManager()
     chat_manager.create_widget(window)
+    chat_manager.send_btn.config(state=ACTIVE)
     window.mainloop()
