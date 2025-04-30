@@ -264,13 +264,13 @@ class NetworkManager:
         else:
             self.disconnect()
             print("NetworkManager: 客戶端斷線")
-
+        
     def handle_identify_message(self, message: GameMessage):
+        """處理 IDENTIFY 訊息"""
         hostname = message.data.get("identify", "未知主機")
-        client_ip, client_port = self.client_socket.getpeername()
-        print(f"NetworkManager: 來自主機 {hostname} ({client_ip}:{client_port}) 的連線")
-        self.recv_queue.put(f"來自主機 {hostname} ({client_ip}:{client_port}) 的連線")
-
+        print(f"NetworkManager: 來自主機 {hostname} 的連線")
+        self.recv_queue.put(f"來自主機 {hostname} 的連線")
+        
     """UI"""
     def on_start_server_success(self, ip:str, port:int):
         self.start_server_btn.config(text="關閉伺服器")

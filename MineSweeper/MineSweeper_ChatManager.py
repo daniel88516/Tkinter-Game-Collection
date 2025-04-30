@@ -138,7 +138,7 @@ class ChatManager:
             "Images/Stickers/happy.png",
             "Images/Stickers/shock.png",
             "Images/Stickers/cry.png",
-            "Images/Stickers/shock.png",
+            "Images/Stickers/doubt.png",
         ]
         for image_path in self.image_paths:
             try:
