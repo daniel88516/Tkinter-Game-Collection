@@ -18,7 +18,7 @@ class CanvasZombie(tk.Frame):
         self.LANE_COUNT = 3
         self.MAX_ROWS = 5
         self.lane_width = 200
-        self.row_height = 150
+        self.row_height = 120
         self.score = 0
         self.combo = 0
         self.game_time = 30
