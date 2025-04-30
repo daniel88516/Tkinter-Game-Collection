@@ -4,6 +4,7 @@ from enum import Enum, auto
 from MineSweeper_Difficulty import Difficulty
 
 class GameMessageType(Enum):
+    IDENTIFY = auto()
     READY_STATE = auto()
     FIRST_CELL_REVEAL = auto()
     CELL_REVEAL = auto()

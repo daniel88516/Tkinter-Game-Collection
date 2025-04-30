@@ -1,6 +1,6 @@
 import socket, threading, json, queue
 from MineSweeper_Event import MyEvent
-from MineSweeper_GameMessage import GameMessage
+from MineSweeper_GameMessage import GameMessage, GameMessageType
 from tkinter import * 
 
 class NetworkManager:    
@@ -176,6 +176,13 @@ class NetworkManager:
             client_ip, client_port = self.client_socket.getsockname()
             self.client_connect_success(ip, port, client_ip, client_port)
             
+            hostname = socket.gethostname()
+            identify_msg:GameMessage = GameMessage(
+                type=GameMessageType.IDENTIFY,
+                data={"identify": hostname}
+            )
+            self.send_game_message(identify_msg)
+            
             self.receive_thread = threading.Thread(target=self.receive_message, daemon=True)
             self.receive_thread.start()
         except Exception as e:
@@ -236,11 +243,16 @@ class NetworkManager:
                     msg, buffer = buffer.split('\n', 1)
                     if not msg:
                         continue
+                    # 嘗試解析遊戲訊息
                     try:
                         game_message = GameMessage.from_json(msg)
                         print(f"NetworkManager: 收到遊戲訊息: {game_message}")
-                        self.recv_queue.put(game_message)
+                        if game_message.type == GameMessageType.IDENTIFY:
+                            self.handle_identify_message(game_message)
+                        else:
+                            self.recv_queue.put(game_message)
                     except json.JSONDecodeError:
+                        # 如果不是遊戲訊息，當作一般訊息處理
                         self.recv_queue.put(msg)
             except Exception as e:
                 self.receive_message_failed(e)
@@ -252,8 +264,13 @@ class NetworkManager:
         else:
             self.disconnect()
             print("NetworkManager: 客戶端斷線")
-
-
+        
+    def handle_identify_message(self, message: GameMessage):
+        """處理 IDENTIFY 訊息"""
+        hostname = message.data.get("identify", "未知主機")
+        print(f"NetworkManager: 來自主機 {hostname} 的連線")
+        self.recv_queue.put(f"來自主機 {hostname} 的連線")
+        
     """UI"""
     def on_start_server_success(self, ip:str, port:int):
         self.start_server_btn.config(text="關閉伺服器")
