@@ -150,13 +150,13 @@ class MineSweeper:
             self.difficulty_buttons.append(btn)
         
         self.ready_button = Button(control_frame, fg="red", text="未準備", command=self.toggle_ready_state, state=DISABLED)
-        self.ready_button.pack(side=LEFT, padx=5)
+        self.ready_button.pack()
         
-        self.reset_button = Button(control_frame, text="重置遊戲", command= lambda: [self.new_game(remember_ready_state=True), self.send_reset_message()], state=DISABLED)
-        self.reset_button.pack(side=LEFT, padx=5)
+        # self.reset_button = Button(control_frame, text="重置遊戲", command= lambda: [self.new_game(remember_ready_state=True), self.send_reset_message()], state=DISABLED)
+        # self.reset_button.pack(side=LEFT, padx=5)
         
-        self.debug_button = Button(control_frame, text="Debug 模式：關閉", command=self.toggle_debug_mode)
-        self.debug_button.pack(side=LEFT, padx=5)
+        # self.debug_button = Button(control_frame, text="Debug 模式：關閉", command=self.toggle_debug_mode)
+        # self.debug_button.pack(side=LEFT, padx=5)
 
     def create_network_panel(self):
         self.network_frame = Frame(self.container)
@@ -193,12 +193,10 @@ class MineSweeper:
         self.player_board.is_ready = not self.player_board.is_ready
         if self.player_board.is_ready:
             self.ready_button.config(fg="green", text="已準備")
-            self.reset_button.config(state=DISABLED)
             for btn in self.difficulty_buttons:
                 btn.config(state=DISABLED)
         else:
             self.ready_button.config(fg="red", text="未準備")
-            self.reset_button.config(state=ACTIVE)
             for btn in self.difficulty_buttons:
                 btn.config(state=ACTIVE)
             self.countdown_timer.reset()
@@ -327,7 +325,6 @@ class MineSweeper:
     
     def config_control_panel_buttons(self, state):
         self.ready_button.config(text="未準備", fg="red", state=state)
-        self.reset_button.config(state=state)
         for btn in self.difficulty_buttons:
             btn.config(state=state)
         
