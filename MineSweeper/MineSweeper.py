@@ -110,7 +110,7 @@ class MineSweeper:
         # 接收訊息
         self.network_manager.on_receive_message_failed.subscribe(self.on_networkManager_receive_message_failed) 
         
-        self.message_handlers = {    
+        self.message_handlers = { 
             GameMessageType.READY_STATE: lambda self, msg: self.opponent_toggle_ready_state(msg.data["state"]),
             GameMessageType.FIRST_CELL_REVEAL: lambda self, msg: self.opponent_board.on_reveal(msg.data["row"], msg.data["col"], msg.data["seed"]),                            
             GameMessageType.CELL_REVEAL: lambda self, msg: self.opponent_board.on_reveal(msg.data["row"], msg.data["col"]),
