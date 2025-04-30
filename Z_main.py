@@ -11,7 +11,7 @@ class ZMain(Frame):
         # 先設定希望縮小後的置中座標
         screen_width = self.root.winfo_screenwidth()
         screen_height = self.root.winfo_screenheight()
-        w, h = 1080,900  # 妳希望視窗還原時的大小
+        w, h = 1300,900  # 妳希望視窗還原時的大小
         x = (screen_width - w) // 2
         y = (screen_height - h) // 2
 
