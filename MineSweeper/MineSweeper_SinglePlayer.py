@@ -1,10 +1,8 @@
 from tkinter import *
 from tkinter import messagebox
-import random
 import os
-from MineSweeper_Cell import CellType, Cell
-from MineSweeper_Difficulty import DifficultyConfig, Difficulty
-from MineSweeper_GameBoard import GameBoard
+from MineSweeper_SinglePlayer_Difficulty import DifficultyConfig, Difficulty
+from MineSweeper_SinglePlayer_GameBoard import GameBoard
 class MineSweeper:
     """初始化"""
     def __init__(self, window:Tk, difficulty: Difficulty=Difficulty.NORMAL):
@@ -31,7 +29,7 @@ class MineSweeper:
         
     def load_images(self):
         """把圖片加載進來, 之後可透過環境變數簡化"""
-        base_path = os.path.join(os.path.dirname(__file__), f"Images/")
+        base_path = os.path.join(os.path.dirname(__file__), f"Images/MineSweeper")
         self.tile_images = {}
         for i in range(1, 9):
             self.tile_images[f"Tile{i}"] = PhotoImage(file=os.path.join(base_path, f"Tile{i}.png"))
@@ -92,10 +90,10 @@ class MineSweeper:
             ).pack(side=LEFT, padx=5)
         
         self.reset_button = Button(control_frame, text="重置遊戲", command=self.new_game)
-        self.reset_button.pack(side=LEFT, padx=5)
+        self.reset_button.pack()
         
-        self.debug_button = Button(control_frame, text="Debug 模式：關閉", command=self.toggle_debug_mode)
-        self.debug_button.pack(side=LEFT, padx=5)
+        # self.debug_button = Button(control_frame, text="Debug 模式：關閉", command=self.toggle_debug_mode)
+        # self.debug_button.pack(side=LEFT, padx=5)
 
     def center_window(self):
         """讓視窗自適應大小, 然後置中"""
@@ -317,7 +315,7 @@ class MineSweeper:
                         img = self.tile_images["TileUnknown"]
                 btn.config(image=img)
 
-    def change_difficulty(self, difficulty):
+    def change_difficulty(self, difficulty: Difficulty):
         """切換難度"""
         self.config = DifficultyConfig(difficulty)
         self.gameBoard = GameBoard(

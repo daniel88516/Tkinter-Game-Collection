@@ -1,5 +1,5 @@
 import random
-from MineSweeper_Cell import Cell
+from MineSweeper_SinglePlayer_Cell import Cell
 class GameBoard:
     """遊戲初始化"""
     def __init__(self, board_width: int, board_height: int, mine_count: int):

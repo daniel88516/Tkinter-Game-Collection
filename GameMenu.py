@@ -81,7 +81,7 @@ class GameMenu:
             "Zombie": os.path.join(base_path, "Z_main.py"),
             "Monty Hall": os.path.join(base_path, "ThreeHall.py"),
             "井字遊戲": os.path.join(base_path, "TicTacToe.py"),
-            "踩地雷(單人版)": os.path.join(base_path, "MineSweeper_SinglePlayer.py"),
+            "踩地雷(單人版)": os.path.join(base_path, "MineSweeper", "MineSweeper_SinglePlayer.py"),
             "踩地雷(多人版)": os.path.join(base_path, "MineSweeper", "MineSweeper.py")
         }
 
