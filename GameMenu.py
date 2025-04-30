@@ -16,7 +16,7 @@ class GameMenu:
 
         screen_width = self.window.winfo_screenwidth()
         screen_height = self.window.winfo_screenheight()
-        w, h = 1080, 900
+        w, h = 1080, 800
         x, y = (screen_width - w) // 2, (screen_height - h) // 2
         self.window.geometry(f"{w}x{h}+{x}+{y}")
 

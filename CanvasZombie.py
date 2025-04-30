@@ -18,7 +18,7 @@ class CanvasZombie(tk.Frame):
         self.LANE_COUNT = 3
         self.MAX_ROWS = 5
         self.lane_width = 200
-        self.row_height = 120
+        self.row_height = 140
         self.score = 0
         self.combo = 0
         self.game_time = 30
@@ -161,11 +161,12 @@ class CanvasZombie(tk.Frame):
         self.bg_img = ImageTk.PhotoImage(bg_raw)
 
 
+        zombie_aize = 150
 
         self.zombie_imgs = [
-            load("Zombie圖片/艾莉.png", (120, 120)),
-            load("Zombie圖片/爽世.png", (120, 120)),
-            load("Zombie圖片/芙莉蓮.png", (120, 120))
+            load("Zombie圖片/艾莉.png", (zombie_aize, zombie_aize)),
+            load("Zombie圖片/爽世.png", (zombie_aize, zombie_aize)),
+            load("Zombie圖片/芙莉蓮.png", (zombie_aize, zombie_aize))
         ]
         self.blank_img = load("Zombie圖片/空格.png", (120, 120))
         self.qiqi_img = load("Zombie圖片/七七.png", (350, 350))
@@ -335,6 +336,14 @@ class CanvasZombie(tk.Frame):
     
 
     def draw_rows(self):
+        # 一開始就清除所有圖片
+        for r in range(self.MAX_ROWS):
+            for c in range(self.LANE_COUNT):
+                if self.current_zombie_ids[r][c]:
+                    self.canvas.delete(self.current_zombie_ids[r][c])
+                    self.current_zombie_ids[r][c] = None
+
+        # 重新畫出畫面
         canvas_w = self.winfo_width()
         lane_total_width = self.LANE_COUNT * self.lane_width
         start_x = (canvas_w - lane_total_width) // 2 + (self.lane_width - 120) // 2
@@ -344,16 +353,8 @@ class CanvasZombie(tk.Frame):
                 x = start_x + c * self.lane_width
                 y = 120 + r * self.row_height
                 if self.rows[r] == c:
-                    if not self.current_zombie_ids[r][c]:
-                        # 🔥這裡不是隨機喔，是用之前決定好的圖片
-                        img = self.current_zombie_imgs[r][c]
-                        self.current_zombie_ids[r][c] = self.canvas.create_image(x, y, anchor="nw", image=img)
-                    else:
-                        self.canvas.itemconfig(self.current_zombie_ids[r][c], image=self.current_zombie_imgs[r][c])
-                else:
-                    if self.current_zombie_ids[r][c]:
-                        self.canvas.delete(self.current_zombie_ids[r][c])
-                        self.current_zombie_ids[r][c] = None
+                    img = self.current_zombie_imgs[r][c]
+                    self.current_zombie_ids[r][c] = self.canvas.create_image(x, y, anchor="nw", image=img)
 
     def update_texts(self):
         self.canvas.itemconfig(self.score_text_id, text=f"{self.score}")
@@ -367,31 +368,71 @@ class CanvasZombie(tk.Frame):
         if column == target:
             self.combo += 1
             self.score += int(1.1 ** self.combo)
+
+            #  更新 rows 
             self.rows.pop()
             self.rows.insert(0, random.randint(0, self.LANE_COUNT - 1))
-            # 顯示 Combo 特效
+
+            #  同步更新 imgs
+            self.current_zombie_imgs.pop()
+            self.current_zombie_imgs.insert(0, [random.choice(self.zombie_imgs) for _ in range(self.LANE_COUNT)])
+
+            # 畫面更新
             self.show_combo_effect()
             self.update_texts()
-            self.draw_rows()
+
+            self.animate_rows_fall(callback=self.draw_rows)
         else:
+            # MISS 處理不變
             self.combo = 0
             self.miss_zombie_jump()
-            #self.canvas.itemconfig(self.status_text_id, text="MISS! 懲罰 1 秒", fill="red")
             self.canvas.itemconfig(self.qiqi_text_id, text=random.choice(self.qiqi_quotes))
             self.canvas.itemconfig(self.raiden_text_id, text=random.choice(self.raiden_quotes))
             self.can_shoot = False
             self.after(1000, self.reset_penalty_and_clear)
 
+            
+    def animate_rows_fall(self, callback=None, duration=500):
+        fps = 120
+        frame_interval = 10000 / fps  
+        steps = int(duration / frame_interval)
+        delta_y = self.row_height / steps
+
+        # 先刪除最後一排殭屍（直接擊殺消失）
+        for c in range(self.LANE_COUNT):
+            zombie_id = self.current_zombie_ids[self.MAX_ROWS - 1][c]
+            if zombie_id:
+                self.canvas.delete(zombie_id)
+                self.current_zombie_ids[self.MAX_ROWS - 1][c] = None
+
+        def move_step(step):
+            if step > steps:
+                if callback:
+                    callback()
+                return
+            # 除了最後一行，全部往下滑
+            for r in range(self.MAX_ROWS - 1):  # 只跑到 MAX_ROWS - 2
+                for c in range(self.LANE_COUNT):
+                    zombie_id = self.current_zombie_ids[r][c]
+                    if zombie_id:
+                        self.canvas.move(zombie_id, 0, delta_y)
+            self.after(int(1000 / fps), lambda: move_step(step + 1))
+
+        move_step(1)
+
+
     
     def show_combo_effect(self):
         self.canvas.itemconfig(self.combo_text_id, text=f"x{self.combo}")
 
+        
         # 殭屍小跳
         target_row = self.MAX_ROWS - 1
         target_col = self.rows[-1]
         if self.current_zombie_ids[target_row][target_col]:
             self.canvas.move(self.current_zombie_ids[target_row][target_col], 0, -10)
             self.after(100, lambda: self.canvas.move(self.current_zombie_ids[target_row][target_col], 0, 10))
+        
 
         # 設定 2秒後自動清空 Combo 字
         if hasattr(self, "combo_after_id") and self.combo_after_id:
