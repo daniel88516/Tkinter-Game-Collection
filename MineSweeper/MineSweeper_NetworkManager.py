@@ -144,6 +144,13 @@ class NetworkManager:
         while self.is_server_running:
             try:
                 client, addr = self.server_socket.accept()
+                
+                # 如果已經連上，拒絕新的連線
+                if self.client_socket: 
+                    print(f"NetworkManager: 已有客戶端連線，拒絕新的連線，來自 {addr}")
+                    client.close()
+                    continue
+
                 self.client_socket = client
                 self.connection_status = True
                 self.receive_thread = threading.Thread(target=self.receive_message, daemon=True)
