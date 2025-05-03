@@ -381,7 +381,13 @@ class MineSweeper:
         self.chat_manager.add_message(f"{self.player_board.get_timer_value()} vs {self.opponent_board.get_timer_value()}", from_self=True)
         self.new_game()
         self.config_control_panel_buttons(ACTIVE)
-        
+              
+    def on_opponent_game_over(self, msg:str):
+        messagebox.showinfo(title="遊戲結果", message=msg)
+        self.chat_manager.add_message(f"{self.player_board.get_timer_value()} vs {self.opponent_board.get_timer_value()}", from_self=True)
+        self.new_game()
+        self.config_control_panel_buttons(ACTIVE)
+
     def on_player_complete(self, msg:str):
         """處理遊戲板勝利事件"""
         messagebox.showinfo(title="遊戲結果", message=msg)
@@ -390,21 +396,18 @@ class MineSweeper:
             data={"result":" 對方完成了!"}
         )
         self.network_manager.send_game_message(message)
-        self.chat_manager.add_message(f"{self.player_board.get_timer_value()} vs {self.opponent_board.get_timer_value()}", from_self=True)
-        self.new_game()
-        self.config_control_panel_buttons(ACTIVE)
-        
-    def on_opponent_game_over(self, msg:str):
-        messagebox.showinfo(title="遊戲結果", message=msg)
-        self.chat_manager.add_message(f"{self.player_board.get_timer_value()} vs {self.opponent_board.get_timer_value()}", from_self=True)
-        self.new_game()
-        self.config_control_panel_buttons(ACTIVE)
-
+        if self.opponent_board.is_game_over:
+            self.chat_manager.add_message(f"{self.player_board.get_timer_value()} vs {self.opponent_board.get_timer_value()}", from_self=True)
+            self.new_game()
+            self.config_control_panel_buttons(ACTIVE)
+    
     def on_opponent_game_complete(self, msg:str):
-        messagebox.showerror(title="遊戲結果", message=msg)
-        self.chat_manager.add_message(f"{self.player_board.get_timer_value()} vs {self.opponent_board.get_timer_value()}", from_self=True)
-        self.new_game()
-        self.config_control_panel_buttons(ACTIVE)
+        self.chat_manager.add_message(f"{msg}", from_self=False)
+        if self.player_board.is_game_over:
+            messagebox.showerror(title="遊戲結果", message=msg)
+            self.chat_manager.add_message(f"{self.player_board.get_timer_value()} vs {self.opponent_board.get_timer_value()}", from_self=True)
+            self.new_game()
+            self.config_control_panel_buttons(ACTIVE)
         
     def on_chatManager_send_message(self, message:str):
         self.network_manager.send_message(message)

@@ -292,7 +292,7 @@ class BoardManager:
         
     def complete(self):
         self.is_game_over = True
-        msg = f"{self.name}贏了!"
+        msg = f"{self.name}完成了!"
         self.on_complete.emit(msg)
     
     def change_difficulty(self, config: DifficultyConfig):
