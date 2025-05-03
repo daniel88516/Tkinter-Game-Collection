@@ -127,8 +127,10 @@ class NetworkManager:
         try:
             if self.client_socket:
                 self.client_socket.close()
+                self.client_socket = None
             if self.server_socket:
                 self.server_socket.close()
+                self.server_socket = None
             self.is_server_running = False
             self.connection_status = False
             print("NetworkManager: 伺服器關閉")
@@ -199,6 +201,7 @@ class NetworkManager:
     def disconnect(self):
         try:
             self.client_socket.close()
+            self.client_socket = None
             self.connection_status = False
             print(f"NetworkManager: 客戶端斷線成功")
             self.client_disconnect_success()

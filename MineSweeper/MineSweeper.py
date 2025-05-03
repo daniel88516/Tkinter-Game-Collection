@@ -187,7 +187,7 @@ class MineSweeper:
         y = (screen_height - height) // 2
         self.window.geometry(f"{total_width}x{height}+{x}+{y}")
         # topmost 
-        self.window.attributes("-topmost", True)
+        # self.window.attributes("-topmost", True)
         
     def toggle_ready_state(self):
         self.player_board.is_ready = not self.player_board.is_ready

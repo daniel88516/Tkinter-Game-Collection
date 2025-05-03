@@ -88,9 +88,10 @@ class BoardManager:
     def get_timer_value(self):
         return self.countup_timer.countdown_var.get()
 
-    def reset(self):
+    def reset(self, remember_ready_state:bool=False):
         """重置遊戲板"""
-        self.is_ready = False
+        if not remember_ready_state: 
+            self.is_ready = False
         self.is_game_started = False
         self.is_game_over = False
         self.first_click = True
@@ -322,4 +323,4 @@ class BoardManager:
                     btn.config(state="disabled")
                 row_buttons.append(btn)
             self.buttons.append(row_buttons)        
-        self.reset()
+        self.reset(remember_ready_state=True)
