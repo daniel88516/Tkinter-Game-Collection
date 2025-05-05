@@ -106,6 +106,7 @@ class CanvasZombie(tk.Frame):
         self.status_text_id = self.canvas.create_text(center_x, center_y, text="", font=("微軟正黑體", 70, "bold"), fill="red")
 
 
+        """
         # 大時間（正中央，紅色）
         self.big_timer_text_id = self.canvas.create_text(
             w // 2, h // 2,
@@ -114,6 +115,8 @@ class CanvasZombie(tk.Frame):
             fill="red",
             anchor="center"
         )
+        """
+        self.big_timer_img_ids = [] #數字圖片list
 
         #combo
         self.combo_text_id = self.canvas.create_text(
@@ -159,6 +162,13 @@ class CanvasZombie(tk.Frame):
         screen_h = self.master.winfo_screenheight()
         bg_raw = bg_raw.resize((screen_w, screen_h), Image.Resampling.LANCZOS)
         self.bg_img = ImageTk.PhotoImage(bg_raw)
+
+        #數字素材
+        self.number_imgs = {}
+        for i in range(10):
+            path = os.path.join(base, f"Zombie圖片/數字/{i}.png")
+            img = Image.open(path).resize((80, 120), Image.Resampling.LANCZOS)  # 大小可調
+            self.number_imgs[str(i)] = ImageTk.PhotoImage(img)
 
 
         zombie_aize = 150
@@ -331,7 +341,7 @@ class CanvasZombie(tk.Frame):
             self.can_shoot = False
             self.canvas.itemconfig(self.status_text_id, text="⏰ 時間到！")
             self.canvas.tag_raise(self.status_text_id) #"時間到"浮到上面
-            self.canvas.itemconfig(self.big_timer_text_id, text="")  # 大時間清空！
+            #self.canvas.itemconfig(self.big_timer_text_id, text="")  # 大時間清空！
             self.prompt_save_score(self.score, self.game_time)
     
 
@@ -359,7 +369,28 @@ class CanvasZombie(tk.Frame):
     def update_texts(self):
         self.canvas.itemconfig(self.score_text_id, text=f"{self.score}")
         self.canvas.itemconfig(self.timer_text_id, text=f"{self.time_left}")
-        self.canvas.itemconfig(self.big_timer_text_id, text=f"{self.time_left}")
+        #self.canvas.itemconfig(self.big_timer_text_id, text=f"{self.time_left}")
+        # 先刪掉舊的圖片
+        for img_id in self.big_timer_img_ids:
+            self.canvas.delete(img_id)
+        self.big_timer_img_ids.clear()
+
+        #---數字圖片---#
+        digits = str(self.time_left)
+        w = self.winfo_width()
+        h = self.winfo_height()
+        total_width = len(digits) * 90  # 每張圖的寬度 + 間距
+        start_x = (w - total_width) // 2
+
+        for i, d in enumerate(digits):
+            if d in self.number_imgs:
+                img = self.number_imgs[d]
+                x = start_x + i * 90
+                y = h // 2 -30
+                img_id = self.canvas.create_image(x, y, image=img, anchor="nw")
+                self.canvas.tag_raise(img_id, self.bg_id)#要放在最背景之上其餘之下
+                self.big_timer_img_ids.append(img_id)
+        #---數字圖片---#
 
     def shoot(self, column):
         if not self.can_shoot or not self.game_running:
