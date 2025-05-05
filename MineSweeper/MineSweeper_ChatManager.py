@@ -14,6 +14,15 @@ class ChatManager:
         self.after_id = None
         self.is_image_cooling_down = False
 
+        base_path = os.path.dirname(os.path.abspath(__file__))
+        self.sticker_map = {
+            "happy": os.path.join(base_path, "Images", "Stickers", "happy.png"),
+            "shock": os.path.join(base_path, "Images", "Stickers", "shock.png"),
+            "cry": os.path.join(base_path, "Images", "Stickers", "cry.png"),
+            "doubt": os.path.join(base_path, "Images", "Stickers", "doubt.png"),
+        }
+
+
     def create_events(self):
         self.on_send_message:MyEvent = MyEvent()
         self.on_send_image:MyEvent = MyEvent()
@@ -135,36 +144,38 @@ class ChatManager:
 
         # 載入圖片並新增按鈕
         self.sticker_btns = []
-        base_path = os.path.dirname(os.path.abspath(__file__)
+        base_path = os.path.dirname(os.path.abspath(__file__))
         self.image_paths = [
             os.path.join(base_path, "Images", "Stickers", "happy.png"),
             os.path.join(base_path, "Images", "Stickers", "shock.png"),
             os.path.join(base_path, "Images", "Stickers", "cry.png"),
             os.path.join(base_path, "Images", "Stickers", "doubt.png"),
         ]
-        for image_path in self.image_paths:
+        
+        for name, path in self.sticker_map.items():
             try:
-                img = Image.open(image_path)
+                img = Image.open(path)
                 img = img.resize((80, 80), Image.LANCZOS)
                 photo = ImageTk.PhotoImage(img)
 
                 btn = Button(
                     image_button_frame,
                     image=photo,
-                    command=lambda path=image_path: self.send_image(path)
+                    command=lambda name=name: self.send_image(name)
                 )
-                btn.image = photo  # 防止圖片被垃圾回收
+                btn.image = photo
                 btn.pack(side="left", padx=5)
                 btn.config(state=DISABLED)
                 self.sticker_btns.append(btn)
             except Exception as e:
-                print(f"無法載入圖片 {image_path}: {e}")  
+                print(f"無法載入圖片 {path}: {e}")
+ 
     
-    def send_image(self, image_path):
-        """傳送圖片"""
-        self.add_message(image_path, from_self=True, is_image=True)
-        self.on_send_image.emit(image_path)
+    def send_image(self, sticker_name):
+        self.add_message(sticker_name, from_self=True, is_image=True)
+        self.on_send_image.emit(sticker_name)
         self.start_image_cooldown()
+
     
     def add_message(self, content, from_self, is_image=False):
         """新增訊息，支援文字和圖片"""
@@ -175,12 +186,11 @@ class ChatManager:
             fill="x",  # 撐滿整行
             pady=2
         )
-
         if is_image:
-            # 圖片顯示
             try:
-                img = Image.open(content)
-                img.thumbnail((200, 200))  # 縮放圖片大小
+                image_path = self.sticker_map[content]
+                img = Image.open(image_path)
+                img.thumbnail((200, 200))
                 photo = ImageTk.PhotoImage(img)
                 label = Label(
                     message_frame,
@@ -188,7 +198,7 @@ class ChatManager:
                     padx=10,
                     pady=5,
                 )
-                label.image = photo  # 防止圖片被垃圾回收
+                label.image = photo
             except Exception as e:
                 label = Label(
                     message_frame,
