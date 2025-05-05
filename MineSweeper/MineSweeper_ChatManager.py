@@ -135,6 +135,7 @@ class ChatManager:
 
         # 載入圖片並新增按鈕
         self.sticker_btns = []
+        base_path = os.path.dirname(os.path.abspath(__file__)
         self.image_paths = [
             os.path.join(base_path, "Images", "Stickers", "happy.png"),
             os.path.join(base_path, "Images", "Stickers", "shock.png"),
