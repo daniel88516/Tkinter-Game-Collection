@@ -173,21 +173,18 @@ class MineSweeper:
         
     def center_window(self):
         """調整視窗大小和位置"""
-        
         self.window.update_idletasks()
 
-        # 計算視窗大小
-        board_width = self.config.board_width * 32
-        total_width = board_width * len(self.board_managers) + 350 + (20 * (len(self.board_managers) - 1))
-        height = self.config.board_height * 32 + 500
-        
+        window_width = self.window.winfo_width()
+        window_height = self.window.winfo_height()
+
         screen_width = self.window.winfo_screenwidth()
         screen_height = self.window.winfo_screenheight()
-        x = (screen_width - total_width) // 2
-        y = (screen_height - height) // 2
-        self.window.geometry(f"{total_width}x{height}+{x}+{y}")
-        # topmost 
-        # self.window.attributes("-topmost", True)
+
+        x = (screen_width // 2) - (window_width // 2)
+        y = (screen_height // 2) - (window_height // 2)
+
+        self.window.geometry(f"+{x}+{y}")
         
     def toggle_ready_state(self):
         self.player_board.is_ready = not self.player_board.is_ready
@@ -308,7 +305,6 @@ class MineSweeper:
         self.chat_manager.reset()
         self.config_control_panel_buttons(ACTIVE)
         self.chat_manager.config_buttons(ACTIVE)
-
         
     def on_networkManager_client_disconnect_success(self):
         self.new_game()
@@ -322,7 +318,6 @@ class MineSweeper:
         self.config_control_panel_buttons(DISABLED)
         self.chat_manager.config_buttons(DISABLED)
 
-    
     def config_control_panel_buttons(self, state):
         self.ready_button.config(text="未準備", fg="red", state=state)
         for btn in self.difficulty_buttons:
