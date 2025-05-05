@@ -2,13 +2,42 @@ from tkinter import *
 from tkinter import ttk
 import sqlite3
 import os
+import sys
+
+def get_base_dir():
+    if getattr(sys, 'frozen', False):  # 如果是 .exe 執行檔
+        return os.path.dirname(sys.executable)
+    else:  # 如果是 .py 執行
+        return os.path.dirname(os.path.abspath(__file__))
+
+BASE_DIR = get_base_dir()
+DB_PATH = os.path.join(BASE_DIR, "zombie_rand.db")
+
+def init_db():
+    if not os.path.exists(DB_PATH):
+        print("資料庫不存在，正在建立...")
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+        cursor.execute('''
+            CREATE TABLE scores (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL,
+                score INTEGER NOT NULL,
+                time INTEGER NOT NULL
+            )
+        ''')
+        conn.commit()
+        conn.close()
+    else:
+        print("資料庫已存在。")
 
 class RankingPage(Frame):
     def __init__(self, parent):
         super().__init__(parent)
 
-        db_path = os.path.join(os.path.dirname(__file__), "zombie_rand.db")
-        self.conn = sqlite3.connect(db_path)
+        init_db()  # 初始化資料庫（如果不存在就建立）
+
+        self.conn = sqlite3.connect(DB_PATH)
         self.cursor = self.conn.cursor()
 
         self.selected_time = IntVar(value=30)
@@ -69,7 +98,7 @@ class RankingPage(Frame):
 
 # --- 執行入口（全螢幕大介面） ---
 if __name__ == "__main__":
-    def center_root(win, w=1080, h=900):
+    def center_root(win, w=1080, h=800):
         win.update_idletasks()
         x = (win.winfo_screenwidth() - w) // 2
         y = (win.winfo_screenheight() - h) // 2
