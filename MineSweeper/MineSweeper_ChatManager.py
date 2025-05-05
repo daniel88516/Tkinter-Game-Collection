@@ -135,10 +135,10 @@ class ChatManager:
         # 載入圖片並新增按鈕
         self.sticker_btns = []
         self.image_paths = [
-            "Images/Stickers/happy.png",
-            "Images/Stickers/shock.png",
-            "Images/Stickers/cry.png",
-            "Images/Stickers/doubt.png",
+            "./Images/Stickers/happy.png",
+            "./Images/Stickers/shock.png",
+            "./Images/Stickers/cry.png",
+            "./Images/Stickers/doubt.png",
         ]
         for image_path in self.image_paths:
             try:
