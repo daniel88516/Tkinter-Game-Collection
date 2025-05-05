@@ -1,3 +1,4 @@
+import os 
 from tkinter import *
 from PIL import Image, ImageTk
 from MineSweeper_Event import MyEvent
