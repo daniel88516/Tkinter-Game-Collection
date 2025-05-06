@@ -1,4 +1,3 @@
-# CanvasZombie - UI 位置調整：統一排版與美化
 import tkinter as tk
 from tkinter import simpledialog, messagebox, Toplevel
 from PIL import Image, ImageTk
@@ -34,6 +33,7 @@ class CanvasZombie(tk.Frame):
 
         self.score_img_ids = []  #紫色數字圖片list
         self.big_timer_img_ids = [] #紅色數字圖片list
+        self.combo_img_digits = []
 
 
 
@@ -99,13 +99,10 @@ class CanvasZombie(tk.Frame):
         center_y = h // 2
 
         #分數
-        self.score_text_id = self.canvas.create_text(center_x - 400, 180, text=" 0 ", anchor="n", font=self.large_font , fill = 'white')
-        self.score_icon_id = self.canvas.create_image(center_x - 400, 120, image=self.score_icon, anchor="center")
+        self.score_icon_id = None
 
         # 時間
-        self.timer_text_id = self.canvas.create_text(center_x + 400, 180, text=" 0 ", anchor="n", font=self.large_font, fill = 'white')
-        self.time_icon_id = self.canvas.create_image(center_x + 400, 120, image=self.time_icon, anchor="center")
-
+        self.timer_text_id = self.canvas.create_text(center_x + 400, 180, text="", anchor="n", font=self.large_font, fill = 'white')
         self.status_text_id = self.canvas.create_text(center_x, center_y, text="", font=("微軟正黑體", 70, "bold"), fill="red")
 
 
@@ -122,13 +119,9 @@ class CanvasZombie(tk.Frame):
         
 
         #combo
-        self.combo_text_id = self.canvas.create_text(
-            center_x + 400, 220,  # 和 timer_text_id 同位置
-            text="", 
-            font=("微軟正黑體", 60, "bold"),
-            fill="green",
-            anchor="n"  # 注意！timer_text 是 anchor="n"，所以 combo也要一樣
-        )
+        self.combo_img_id = self.canvas.create_image(self.winfo_width() // 2 + 400, 220, anchor="n", image=None)
+        self.combo_text_id = self.canvas.create_text(self.winfo_width() // 2 + 400, 310, text="", font=self.large_font, fill="yellow", anchor="n")
+
 
         #七七
         self.qiqi_id = self.canvas.create_image(w - 390, 200, anchor="nw", image=self.qiqi_img)
@@ -138,9 +131,42 @@ class CanvasZombie(tk.Frame):
         self.raiden_id = self.canvas.create_image(140, 275, anchor="nw", image=self.raiden_img)
         self.raiden_text_id = self.canvas.create_text(250, 560, text="", font=self.large_font, fill="#0000CC", anchor="center", width=400)
 
-        #開始按鈕
-        self.button_rect = self.canvas.create_rectangle(w - 220, h - 100, w - 40, h - 40, fill="purple")
-        self.button_text = self.canvas.create_text(w - 130, h - 70, text="開始", font=self.large_font, fill="plum1")
+        offset_x = 0 
+        offset_y = -10
+
+        # 返回主選單按鈕（保持原位）
+        return_button_left = w - 220 - offset_x
+        return_button_top = h - 100 - offset_y
+        return_button_right = w - 40 - offset_x
+        return_button_bottom = h - 40 - offset_y
+
+        self.return_rect = self.canvas.create_rectangle(
+            return_button_left, return_button_top,
+            return_button_right, return_button_bottom,
+            fill="purple"
+        )
+        self.return_text = self.canvas.create_text(
+            (return_button_left + return_button_right) // 2,
+            (return_button_top + return_button_bottom) // 2,
+            text="返回主選單", font=self.large_font, fill="plum1"
+        )
+
+        # 開始按鈕（移到上方一段距離）
+        start_button_left = return_button_left
+        start_button_top = return_button_top - 80  # ← 上移 80 px
+        start_button_right = return_button_right
+        start_button_bottom = return_button_top - 20
+
+        self.button_rect = self.canvas.create_rectangle(
+            start_button_left, start_button_top,
+            start_button_right, start_button_bottom,
+            fill="purple"
+        )
+        self.button_text = self.canvas.create_text(
+            (start_button_left + start_button_right) // 2,
+            (start_button_top + start_button_bottom) // 2,
+            text="開始", font=self.large_font, fill="plum1"
+        )
 
         #預留一個空的圖片物件放在畫面正中央。
         self.countdown_image_id = self.canvas.create_image(
@@ -150,7 +176,9 @@ class CanvasZombie(tk.Frame):
             image=None
         )
 
-    
+    def quit_game(self):
+        self.master.destroy()
+
     def load_images(self):
         base = os.path.dirname(__file__)
 
@@ -202,6 +230,11 @@ class CanvasZombie(tk.Frame):
             load("Zombie圖片/2.png", (400, 400)),
             load("Zombie圖片/1.png", (400, 400)),
         ]
+
+        self.times_up_img = load("Zombie圖片/times_up.png", (600, 600)) 
+        self.combo_img = load("Zombie圖片/combo.png", (200, 150))
+        self.x_img = load("Zombie圖片/x.png", (80, 80))
+
         
     def setup_db(self):
         db_path = os.path.join(os.path.dirname(__file__), "zombie_rand.db")
@@ -222,6 +255,11 @@ class CanvasZombie(tk.Frame):
         coords = self.canvas.coords(self.button_rect)
         if coords[0] <= x <= coords[2] and coords[1] <= y <= coords[3]:
             self.ask_game_duration()
+        if hasattr(self, "return_rect"):
+            return_coords = self.canvas.coords(self.return_rect)
+            if return_coords[0] <= x <= return_coords[2] and return_coords[1] <= y <= return_coords[3]:
+                self.quit_game()
+                return
 
     def ask_game_duration(self):
         def set_time(t):
@@ -232,7 +270,7 @@ class CanvasZombie(tk.Frame):
 
         win = Toplevel(self)
         win.title("選擇遊戲時間")
-        self.center_window(win, 400, 500)  # ⬅加大寬高
+        self.center_window(win, 400, 500)
 
         tk.Label(win, text="請選擇遊戲時間", font=self.large_font).pack(pady=20)
 
@@ -240,12 +278,19 @@ class CanvasZombie(tk.Frame):
         btn_width = 12
         btn_height = 2
 
-        tk.Button(win, text="30 秒", font=btn_font, width=btn_width, height=btn_height,
-                command=lambda: set_time(30)).pack(pady=10)
+        # 第一個按鈕：focus_set + Enter 綁定觸發
+        btn_30 = tk.Button(win, text="30 秒", font=btn_font, width=btn_width, height=btn_height,
+                        command=lambda: set_time(30))
+        btn_30.pack(pady=10)
+        btn_30.focus_set()
+
         tk.Button(win, text="60 秒", font=btn_font, width=btn_width, height=btn_height,
                 command=lambda: set_time(60)).pack(pady=10)
         tk.Button(win, text="自訂時間", font=btn_font, width=btn_width, height=btn_height,
                 command=lambda: self.ask_custom_time(win)).pack(pady=10)
+        win.bind("<Return>", lambda e: win.focus_get().invoke())
+
+        win.grab_set()
 
     def ask_custom_time(self, parent):
         def submit():
@@ -299,6 +344,8 @@ class CanvasZombie(tk.Frame):
             anchor="center",
             image=None
         )
+        self.times_up_image_id = self.canvas.create_image(self.winfo_width() // 2, self.winfo_height() // 2, anchor="center", image=None)
+
 
         self.rows = [random.randint(0, self.LANE_COUNT - 1) for _ in range(self.MAX_ROWS)]
         for r in range(self.MAX_ROWS):
@@ -352,8 +399,8 @@ class CanvasZombie(tk.Frame):
         else:
             self.game_running = False
             self.can_shoot = False
-            self.canvas.itemconfig(self.status_text_id, text="⏰ 時間到！")
-            self.canvas.tag_raise(self.status_text_id) #"時間到"浮到上面
+            self.canvas.itemconfig(self.status_text_id, text="")
+            self.canvas.tag_raise(self.status_text_id)
             #self.canvas.itemconfig(self.big_timer_text_id, text="")  
             self.prompt_save_score(self.score, self.game_time)
     
@@ -380,7 +427,7 @@ class CanvasZombie(tk.Frame):
                     self.current_zombie_ids[r][c] = self.canvas.create_image(x, y, anchor="nw", image=img)
 
     def update_texts(self):
-        self.canvas.itemconfig(self.timer_text_id, text=f"{self.time_left}")
+        self.canvas.itemconfig(self.timer_text_id, text="")
 
         # 清除舊的倒數圖像
         for img_id in self.big_timer_img_ids:
@@ -422,8 +469,8 @@ class CanvasZombie(tk.Frame):
         if use_b:
             total_width += digit_width  # 為 b 圖留空間
 
-        icon_x = self.canvas.coords(self.score_icon_id)[0] -180
-        start_y = self.canvas.coords(self.score_icon_id)[1] + 10
+        icon_x = 240  
+        start_y = 140 
 
         total_width = len(display_digits) * digit_width
         if use_b:
@@ -475,6 +522,7 @@ class CanvasZombie(tk.Frame):
             self.can_shoot = False
             self.after(1000, self.reset_penalty_and_clear)
 
+
             
     def animate_rows_fall(self, callback=None, duration=500):
         fps = 120
@@ -507,24 +555,68 @@ class CanvasZombie(tk.Frame):
 
     
     def show_combo_effect(self):
-        self.canvas.itemconfig(self.combo_text_id, text=f"x{self.combo}")
+        # 清除舊的
+        for img_id in self.combo_img_digits:
+            self.canvas.delete(img_id)
+        self.combo_img_digits.clear()
 
-        
-        # 殭屍小跳
-        target_row = self.MAX_ROWS - 1
-        target_col = self.rows[-1]
-        if self.current_zombie_ids[target_row][target_col]:
-            self.canvas.move(self.current_zombie_ids[target_row][target_col], 0, -10)
-            self.after(100, lambda: self.canvas.move(self.current_zombie_ids[target_row][target_col], 0, 10))
-        
+        if hasattr(self, "combo_combo_img_id"):
+            self.canvas.delete(self.combo_combo_img_id)
+        if hasattr(self, "combo_x_img_id"):
+            self.canvas.delete(self.combo_x_img_id)
 
-        # 設定 2秒後自動清空 Combo 字
+        # combo
+        x = self.winfo_width() // 2 + 400
+        combo_y = 220
+        self.combo_combo_img_id = self.canvas.create_image(x, combo_y, image=self.combo_img, anchor="n")
+        self.canvas.tag_raise(self.combo_combo_img_id)
+
+        # x
+        combo_str = str(self.combo)
+        digit_width = 48
+        digit_total_width = len(combo_str) * digit_width
+        x_img_x = x - digit_total_width // 2 - 10
+        self.combo_x_img_id = self.canvas.create_image(x_img_x, combo_y + 90, image=self.x_img, anchor="n")
+        self.canvas.tag_raise(self.combo_x_img_id)
+
+        # 數字圖片
+        combo_str = str(self.combo)
+        y = 310
+        digit_width = 48
+        start_x = x - len(combo_str) * digit_width // 2
+
+        for i, char in enumerate(combo_str):
+            if char in self.score_number_imgs:
+                img = self.score_number_imgs[char]
+                img_id = self.canvas.create_image(start_x + i * digit_width, y, image=img, anchor="nw")
+                self.combo_img_digits.append(img_id)
+
+        # 小跳動畫
+        row = self.MAX_ROWS - 1
+        col = self.rows[-1]
+        if self.current_zombie_ids[row][col]:
+            self.canvas.move(self.current_zombie_ids[row][col], 0, -10)
+            self.after(100, lambda: self.canvas.move(self.current_zombie_ids[row][col], 0, 10))
+
+        # 一秒後清除
         if hasattr(self, "combo_after_id") and self.combo_after_id:
             self.after_cancel(self.combo_after_id)
         self.combo_after_id = self.after(1000, self.clear_combo_text)
-    
+
+            
     def clear_combo_text(self):
-        self.canvas.itemconfig(self.combo_text_id, text="")
+        for img_id in self.combo_img_digits:
+            self.canvas.delete(img_id)
+        self.combo_img_digits.clear()
+
+        if hasattr(self, "combo_combo_img_id"):
+            self.canvas.delete(self.combo_combo_img_id)
+            self.combo_combo_img_id = None
+
+        if hasattr(self, "combo_x_img_id"):
+            self.canvas.delete(self.combo_x_img_id)
+            self.combo_x_img_id = None
+
         self.combo_after_id = None
 
 
@@ -540,7 +632,12 @@ class CanvasZombie(tk.Frame):
         key = event.keysym
         if key in key_map:
             self.shoot(key_map[key])
-
+        elif key == "Return":
+            # 模擬點擊開始按鈕
+            coords = self.canvas.coords(self.button_rect)
+            fake_event = type("Event", (), {"x": (coords[0] + coords[2]) // 2, "y": (coords[1] + coords[3]) // 2})()
+            self.mouse_click_handler(fake_event)
+            
     def prompt_save_score(self, score, time_mode):
         if time_mode not in [30, 60]:
             return
