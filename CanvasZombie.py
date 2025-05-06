@@ -32,6 +32,9 @@ class CanvasZombie(tk.Frame):
         self.countdown_job = None
         self.countdown_animation_jobs = []
 
+        self.score_img_ids = []  #紫色數字圖片list
+        self.big_timer_img_ids = [] #紅色數字圖片list
+
 
 
         #字體設定
@@ -116,7 +119,7 @@ class CanvasZombie(tk.Frame):
             anchor="center"
         )
         """
-        self.big_timer_img_ids = [] #數字圖片list
+        
 
         #combo
         self.combo_text_id = self.canvas.create_text(
@@ -164,11 +167,21 @@ class CanvasZombie(tk.Frame):
         self.bg_img = ImageTk.PhotoImage(bg_raw)
 
         #數字素材
+        #倒數用的數字圖(紅色)
         self.number_imgs = {}
         for i in range(10):
             path = os.path.join(base, f"Zombie圖片/數字/{i}.png")
-            img = Image.open(path).resize((80, 120), Image.Resampling.LANCZOS)  # 大小可調
+            img = Image.open(path).resize((120, 120), Image.Resampling.LANCZOS)  # 大小可調
             self.number_imgs[str(i)] = ImageTk.PhotoImage(img)
+        # 分數用的數字圖(紫色)
+        self.score_number_imgs = {}
+        for i in range(10):
+            path = os.path.join(base, f"Zombie圖片/分數數字/{i}.png")
+            img = Image.open(path).resize((75, 75), Image.Resampling.LANCZOS)
+            self.score_number_imgs[str(i)] = ImageTk.PhotoImage(img)
+        yi_path = os.path.join(base, "Zombie圖片/分數數字/b.png")
+        yi_img = Image.open(yi_path).resize((80, 80), Image.Resampling.LANCZOS)
+        self.score_number_imgs["b"] = ImageTk.PhotoImage(yi_img)
 
 
         zombie_aize = 150
@@ -341,7 +354,7 @@ class CanvasZombie(tk.Frame):
             self.can_shoot = False
             self.canvas.itemconfig(self.status_text_id, text="⏰ 時間到！")
             self.canvas.tag_raise(self.status_text_id) #"時間到"浮到上面
-            #self.canvas.itemconfig(self.big_timer_text_id, text="")  # 大時間清空！
+            #self.canvas.itemconfig(self.big_timer_text_id, text="")  
             self.prompt_save_score(self.score, self.game_time)
     
 
@@ -367,30 +380,70 @@ class CanvasZombie(tk.Frame):
                     self.current_zombie_ids[r][c] = self.canvas.create_image(x, y, anchor="nw", image=img)
 
     def update_texts(self):
-        self.canvas.itemconfig(self.score_text_id, text=f"{self.score}")
         self.canvas.itemconfig(self.timer_text_id, text=f"{self.time_left}")
-        #self.canvas.itemconfig(self.big_timer_text_id, text=f"{self.time_left}")
-        # 先刪掉舊的圖片
+
+        # 清除舊的倒數圖像
         for img_id in self.big_timer_img_ids:
             self.canvas.delete(img_id)
         self.big_timer_img_ids.clear()
 
-        #---數字圖片---#
+        # ---紅色數字圖片（倒數）--- #
         digits = str(self.time_left)
         w = self.winfo_width()
         h = self.winfo_height()
-        total_width = len(digits) * 90  # 每張圖的寬度 + 間距
+        total_width = len(digits) * 90
         start_x = (w - total_width) // 2
 
         for i, d in enumerate(digits):
             if d in self.number_imgs:
                 img = self.number_imgs[d]
                 x = start_x + i * 90
-                y = h // 2 -30
+                y = h // 2 - 30
                 img_id = self.canvas.create_image(x, y, image=img, anchor="nw")
-                self.canvas.tag_raise(img_id, self.bg_id)#要放在最背景之上其餘之下
+                self.canvas.tag_raise(img_id, self.bg_id)
                 self.big_timer_img_ids.append(img_id)
-        #---數字圖片---#
+        # ---紅色數字圖片--- #
+
+        # ---紫色數字圖片（分數）--- #
+        for img_id in self.score_img_ids:
+            self.canvas.delete(img_id)
+        self.score_img_ids.clear()
+
+        # 判斷是否顯示為 billion
+        if self.score >= 10**9:
+            display_digits = str(self.score // 10**9)  # billion 
+            use_b = True
+        else:
+            display_digits = str(self.score)
+            use_b = False
+
+        digit_width = 48
+        total_width = len(display_digits) * digit_width
+        if use_b:
+            total_width += digit_width  # 為 b 圖留空間
+
+        icon_x = self.canvas.coords(self.score_icon_id)[0] -180
+        start_y = self.canvas.coords(self.score_icon_id)[1] + 10
+
+        total_width = len(display_digits) * digit_width
+        if use_b:
+            total_width += digit_width
+
+        start_x = icon_x - total_width // 2  # 自動置中
+
+        for i, d in enumerate(display_digits):
+            if d in self.score_number_imgs:
+                img = self.score_number_imgs[d]
+                x = start_x + i * digit_width
+                img_id = self.canvas.create_image(x, start_y, image=img, anchor="nw")
+                self.score_img_ids.append(img_id)
+
+        if use_b and "b" in self.score_number_imgs:
+            b_img = self.score_number_imgs["b"]
+            x = start_x + len(display_digits) * digit_width + 8  # 稍微偏右一點
+            img_id = self.canvas.create_image(x, start_y, image=b_img, anchor="nw")
+            self.score_img_ids.append(img_id)
+        # ---紫色數字圖片--- #
 
     def shoot(self, column):
         if not self.can_shoot or not self.game_running:
@@ -495,7 +548,7 @@ class CanvasZombie(tk.Frame):
         def show_custom_dialog():
             dialog = Toplevel(self)
             dialog.title("遊戲結束")
-            self.center_window(dialog, 400, 250)  
+            self.center_window(dialog, 600, 250)  
 
             tk.Label(dialog, text=f"你獲得了 {score} 分！", font=self.default_font).pack(pady=10)
             tk.Label(dialog, text="請輸入你的名字：", font=self.default_font).pack()
