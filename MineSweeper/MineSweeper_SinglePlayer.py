@@ -97,17 +97,17 @@ class MineSweeper:
 
     def center_window(self):
         """讓視窗自適應大小, 然後置中"""
-        self.window.update_idletasks()
+        # self.window.update_idletasks()
 
         # 每個方塊的大小是 32 
-        width = self.gameBoard.width * 32 + 40  # 左右各加 20 像素邊距
-        height = self.gameBoard.height * 32 + 120  # 加入控制面板高度
+        # width = self.gameBoard.width * 32 + 40  # 左右各加 20 像素邊距
+        # height = self.gameBoard.height * 32 + 120  # 加入控制面板高度
         
-        screen_width = self.window.winfo_screenwidth()
-        screen_height = self.window.winfo_screenheight()
-        x = (screen_width - width) // 2
-        y = (screen_height - height) // 2
-        self.window.geometry(f"{width}x{height}+{x}+{y}")
+        # screen_width = self.window.winfo_screenwidth()
+        # screen_height = self.window.winfo_screenheight()
+        # x = (screen_width - width) // 2
+        # y = (screen_height - height) // 2
+        # self.window.geometry(f"{width}x{height}+{x}+{y}")
         
     def toggle_debug_mode(self):
         """作弊是一定要有的, 開發者很累的"""
