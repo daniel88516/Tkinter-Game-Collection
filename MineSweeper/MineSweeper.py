@@ -7,12 +7,13 @@ from MineSweeper_NetworkManager import NetworkManager
 from MineSweeper_GameMessage import GameMessage, GameMessageType
 from MineSweeper_ChatManager import ChatManager
 from MineSweeper_Timer import CountDownTimer
+
 class MineSweeper:
     """主遊戲類"""
     def __init__(self, window:Tk):
         self.window = window
         self.container = Frame(self.window)
-        self.container.pack(fill="both", expand=True)
+        self.container.pack(fill=BOTH, expand=True)
         
         self.load_images()
         self.create_variable()
@@ -91,24 +92,25 @@ class MineSweeper:
         self.board_managers.append(self.opponent_board)
     
     def create_gameBoard_eventHandler(self):
-        self.player_board.on_first_reveal_cell.subscribe(self.on_player_first_reveal_cell)
-        self.player_board.on_reveal_cell.subscribe(self.on_player_reveal_cell)
-        self.player_board.on_toggle_flag_cell.subscribe(self.on_player_toggle_flag_cell)
-        self.player_board.on_chord_click_cell.subscribe(self.on_player_chord_click_cell)
-        self.player_board.on_chord_press_cell.subscribe(self.on_player_chord_press_cell)
-        self.player_board.on_chord_release_cell.subscribe(self.on_player_chord_release_cell)
-        self.player_board.on_game_over.subscribe(self.on_player_game_over)
-        self.player_board.on_complete.subscribe(self.on_player_complete)
+        self.player_board.event_first_reveal_cell.subscribe(self.on_player_first_reveal_cell)
+        self.player_board.event_reveal_cell.subscribe(self.on_player_reveal_cell)
+        self.player_board.event_toggle_flag_cell.subscribe(self.on_player_toggle_flag_cell)
+        self.player_board.event_chord_click_cell.subscribe(self.on_player_chord_click_cell)
+        self.player_board.event_chord_press_cell.subscribe(self.on_player_chord_press_cell)
+        self.player_board.event_chord_release_cell.subscribe(self.on_player_chord_release_cell)
+        self.player_board.event_game_over.subscribe(self.on_player_game_over)
+        self.player_board.event_complete.subscribe(self.on_player_complete)
+        self.player_board.event_toggle_safe_reveal_var.subscribe(self.on_player_toggle_safe_reveal_var)
    
     def create_network_eventHandler(self):
         # server events, 開關, 連線, 斷線
-        self.network_manager.on_server_connect_success.subscribe(self.on_networkManager_server_connect_success)
-        self.network_manager.on_server_disconnect_success.subscribe(self.on_networkManager_server_disconnect_success)
-        self.network_manager.on_client_connect_success.subscribe(self.on_networkManager_client_connect_success)
-        self.network_manager.on_client_disconnect_success.subscribe(self.on_networkManager_client_disconnect_success)
+        self.network_manager.on_server_connect_success.subscribe(self.event_networkManager_server_connect_success)
+        self.network_manager.on_server_disconnect_success.subscribe(self.event_networkManager_server_disconnect_success)
+        self.network_manager.on_client_connect_success.subscribe(self.event_networkManager_client_connect_success)
+        self.network_manager.on_client_disconnect_success.subscribe(self.event_networkManager_client_disconnect_success)
         
         # 接收訊息
-        self.network_manager.on_receive_message_failed.subscribe(self.on_networkManager_receive_message_failed) 
+        self.network_manager.on_receive_message_failed.subscribe(self.event_networkManager_receive_message_failed) 
         
         self.message_handlers = { 
             GameMessageType.READY_STATE: lambda self, msg: self.opponent_toggle_ready_state(msg.data["state"]),
@@ -120,14 +122,15 @@ class MineSweeper:
             GameMessageType.CHORD_RELEASE: lambda self, msg: self.opponent_board.on_chord_release(msg.data["row"], msg.data["col"]),
             GameMessageType.GAME_OVER: lambda self, msg: self.on_opponent_game_over(msg.data["result"]),
             GameMessageType.GAME_COMPLETE: lambda self, msg: self.on_opponent_game_complete(msg.data["result"]),
+            GameMessageType.TOGGLE_SAFE_REVEAL_VAR: lambda self, msg: self.opponent_board.on_toggle_safe_reveal_var(),
             GameMessageType.RESET: lambda self, msg: self.new_game(remember_ready_state=True),
             GameMessageType.CHANGE_DIFFICULTY: lambda self,msg :self.change_difficulty(msg.data["difficulty"]),
             GameMessageType.IMAGE: lambda self, msg: self.chat_manager.add_message(msg.data["image_path"], from_self=False, is_image=True)
         }
    
     def create_counter_eventHandler(self):
-        self.countdown_timer.on_counter_change.subscribe(self.on_timer_count_change)
-        self.countdown_timer.on_count_end.subscribe(self.on_timer_count_end)
+        self.countdown_timer.event_counter_change.subscribe(self.on_timer_count_change)
+        self.countdown_timer.event_count_end.subscribe(self.on_timer_count_end)
         
     def create_control_panel(self):
         """控制面板"""
@@ -172,19 +175,25 @@ class MineSweeper:
         self.chat_manager.on_send_image.subscribe(self.on_chatManager_send_image)
         
     def center_window(self):
-        """調整視窗大小和位置"""
+        """調整視窗大小和位置，比合適大小再大一圈"""
         self.window.update_idletasks()
 
         window_width = self.window.winfo_width()
         window_height = self.window.winfo_height()
 
+        # 額外加大一圈（例如左右各加20, 上下各加20）
+        extra_width = 40
+        extra_height = 40
+        new_width = window_width + extra_width
+        new_height = window_height + extra_height
+
         screen_width = self.window.winfo_screenwidth()
         screen_height = self.window.winfo_screenheight()
 
-        x = (screen_width // 2) - (window_width // 2)
-        y = (screen_height // 2) - (window_height // 2)
+        x = (screen_width // 2) - (new_width // 2)
+        y = (screen_height // 2) - (new_height // 2)
 
-        self.window.geometry(f"+{x}+{y}")
+        self.window.geometry(f"{new_width}x{new_height}+{x}+{y}")
         
     def toggle_ready_state(self):
         self.player_board.is_ready = not self.player_board.is_ready
@@ -289,30 +298,30 @@ class MineSweeper:
         else: 
             print("沒有找到訊息的對應處理方法")
             
-    def on_networkManager_server_connect_success(self):
+    def event_networkManager_server_connect_success(self):
         self.change_difficulty(Difficulty.EASY)
         self.send_change_difficulty_message(Difficulty.EASY)
         self.config_control_panel_buttons(ACTIVE)
         self.chat_manager.config_buttons(ACTIVE)
         
-    def on_networkManager_server_disconnect_success(self):
+    def event_networkManager_server_disconnect_success(self):
         self.new_game()
         self.chat_manager.reset()
         self.config_control_panel_buttons(DISABLED)
         self.chat_manager.config_buttons(DISABLED)
                 
-    def on_networkManager_client_connect_success(self):
+    def event_networkManager_client_connect_success(self):
         self.chat_manager.reset()
         self.config_control_panel_buttons(ACTIVE)
         self.chat_manager.config_buttons(ACTIVE)
         
-    def on_networkManager_client_disconnect_success(self):
+    def event_networkManager_client_disconnect_success(self):
         self.new_game()
         self.chat_manager.reset()
         self.config_control_panel_buttons(DISABLED)
         self.chat_manager.config_buttons(DISABLED)
         
-    def on_networkManager_receive_message_failed(self):
+    def event_networkManager_receive_message_failed(self):
         self.new_game()
         self.chat_manager.reset()
         self.config_control_panel_buttons(DISABLED)
@@ -367,35 +376,44 @@ class MineSweeper:
     
     """下面的四個函數, 可以合併。"""
     def on_player_game_over(self, msg:str):
-        messagebox.showinfo(title="遊戲結果", message=msg)
         message:GameMessage = GameMessage(
             type=GameMessageType.GAME_OVER,
             data={"result": "對方爆炸了!"}
         )
         self.network_manager.send_game_message(message)
-        self.chat_manager.add_message(f"{self.player_board.get_timer_value()} vs {self.opponent_board.get_timer_value()}", from_self=True)
+        
+        messagebox.showinfo(title="遊戲結果", message=msg)
+        self.chat_manager.add_message(f"你{self.chat_manager.get_random_final_message()}", from_self=True)
         self.new_game()
         self.config_control_panel_buttons(ACTIVE)
               
     def on_opponent_game_over(self, msg:str):
+        self.chat_manager.add_message(f"對手{self.chat_manager.get_random_final_message()}", from_self=True)
         messagebox.showinfo(title="遊戲結果", message=msg)
-        self.chat_manager.add_message(f"{self.player_board.get_timer_value()} vs {self.opponent_board.get_timer_value()}", from_self=True)
         self.new_game()
         self.config_control_panel_buttons(ACTIVE)
 
     def on_player_complete(self, msg:str):
         """處理遊戲板勝利事件"""
-        messagebox.showinfo(title="遊戲結果", message=msg)
         message:GameMessage = GameMessage(
             type=GameMessageType.GAME_COMPLETE,
             data={"result":" 對方完成了!"}
         )
+        messagebox.showinfo(title="遊戲結果", message=msg)
         self.network_manager.send_game_message(message)
         if self.opponent_board.is_game_over:
             self.chat_manager.add_message(f"{self.player_board.get_timer_value()} vs {self.opponent_board.get_timer_value()}", from_self=True)
             self.new_game()
             self.config_control_panel_buttons(ACTIVE)
     
+    def on_player_toggle_safe_reveal_var(self):
+        """處理安全顯示變數"""
+        message:GameMessage = GameMessage(
+            type=GameMessageType.TOGGLE_SAFE_REVEAL_VAR,
+            data={}
+        )
+        self.network_manager.send_game_message(message)
+        
     def on_opponent_game_complete(self, msg:str):
         self.chat_manager.add_message(f"{msg}", from_self=False)
         if self.player_board.is_game_over:

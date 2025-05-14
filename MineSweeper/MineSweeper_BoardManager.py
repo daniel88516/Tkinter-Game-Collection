@@ -1,5 +1,4 @@
 from tkinter import *
-from tkinter import messagebox
 import os
 from MineSweeper_Difficulty import DifficultyConfig, Difficulty
 from MineSweeper_GameBoard import GameBoard
@@ -45,24 +44,27 @@ class BoardManager:
         self.is_game_over = False
         self.is_game_started = False
         self.first_click = True
+        self.safe_reveal_var = False
         self.chord_holding = False
         self.flagged_count:int = 0
         self.countup_timer = CountUpTimer(self.board_frame)
 
     def create_events(self):
-        self.on_first_reveal_cell:MyEvent = MyEvent()
-        self.on_reveal_cell:MyEvent = MyEvent()
-        self.on_toggle_flag_cell:MyEvent = MyEvent()
-        self.on_chord_click_cell:MyEvent = MyEvent()
-        self.on_chord_press_cell:MyEvent = MyEvent()
-        self.on_chord_release_cell:MyEvent = MyEvent()
-        self.on_game_over:MyEvent = MyEvent()
-        self.on_complete:MyEvent = MyEvent()
+        self.event_first_reveal_cell:MyEvent = MyEvent()
+        self.event_reveal_cell:MyEvent = MyEvent()
+        self.event_toggle_flag_cell:MyEvent = MyEvent()
+        self.event_chord_click_cell:MyEvent = MyEvent()
+        self.event_chord_press_cell:MyEvent = MyEvent()
+        self.event_chord_release_cell:MyEvent = MyEvent()
+        self.event_game_over:MyEvent = MyEvent()
+        self.event_complete:MyEvent = MyEvent()
+        self.event_toggle_safe_reveal_var:MyEvent = MyEvent()
+        
         # 當第一次揭開格子時, 啟動計時器
-        self.on_first_reveal_cell.subscribe(lambda r,c,seed: self.start_timer())
+        self.event_first_reveal_cell.subscribe(lambda r,c,seed: self.start_timer())
         # 遊戲結束或重置時, 停止並重置計時器
-        self.on_game_over.subscribe(lambda *args, **kwargs: self.stop_timer())
-        self.on_complete.subscribe(lambda *args, **kwargs: self.stop_timer())
+        self.event_game_over.subscribe(lambda *args, **kwargs: self.stop_timer())
+        self.event_complete.subscribe(lambda *args, **kwargs: self.stop_timer())
 
     def create_ui(self):
         """創建 UI"""
@@ -72,11 +74,18 @@ class BoardManager:
         self.timer_label.pack(pady=(0,5))
         
         # 遊戲板按鈕
-        self.buttons_frame = LabelFrame(self.board_frame, text=self.name)
+        self.buttons_frame = Frame(self.board_frame)
+        # self.buttons_frame = LabelFrame(self.board_frame, text=self.name)
         self.buttons_frame.pack()
         
+        # 技能施放按鈕區塊
+        self.skill_frame = Frame(self.board_frame)
+        self.safe_reveal_button = Button(self.skill_frame, text="安全展開", command=self.on_toggle_safe_reveal_var)
+        # change_difficulty 會呼叫 reset
         self.change_difficulty(DifficultyConfig(Difficulty.EASY))
-    
+        self.safe_reveal_button.pack()
+        self.skill_frame.pack(pady=(5,0))
+
     def start_timer(self):
         self.is_game_started = True
         self.countup_timer.reset()
@@ -95,6 +104,11 @@ class BoardManager:
         self.is_game_started = False
         self.is_game_over = False
         self.first_click = True
+        self.safe_reveal_var = False
+        
+        self.safe_reveal_button.config(text="安全展開")
+        self.safe_reveal_button.config(state=DISABLED)
+        
         self.gameBoard.reset()
         self.countup_timer.reset()
         self.update_board()
@@ -135,29 +149,42 @@ class BoardManager:
         
         # 第一次按下的時候, 才擺放地雷
         if self.first_click:
+            if self.is_opponent == False:
+                self.safe_reveal_button.config(state=ACTIVE)
             self.first_click = False
-            self.on_first_reveal_cell.emit(r, c, seed)
+            self.event_first_reveal_cell.emit(r, c, seed)
             self.gameBoard.place_mines(r, c, seed)
             self.gameBoard.calculate_numbers()
 
-
         # 每次按下, 判斷是否為地雷
-        self.on_reveal_cell.emit(r, c)
+        self.event_reveal_cell.emit(r, c)
         if cell.is_mine():
-            cell.exploded = True
-            cell.revealed = True
-            self.game_over()
+            if self.safe_reveal_var == True:
+                cell.flagged = True
+                cell.revealed = True 
+                self.safe_reveal_var = False
+                self.safe_reveal_button.config(text="安全展開")
+                self.safe_reveal_button.config(state=DISABLED)
+            else: 
+                cell.exploded = True
+                cell.revealed = True
+                self.game_over()
         elif cell.is_number():
             cell.revealed = True
         elif cell.is_empty():
             self.flood_fill(r, c)
+
         self.update_board()
         self.check_win_condition()
-    
-    @operation_check
+        
+    def on_toggle_safe_reveal_var(self):
+        self.event_toggle_safe_reveal_var.emit()
+        self.safe_reveal_var = not self.safe_reveal_var
+        self.safe_reveal_button.config(foreground="green" if self.safe_reveal_var == True else "red")
+        
     def on_toggle_flag(self, r:int, c:int):
         """你按下了右鍵插旗子"""        
-        self.on_toggle_flag_cell.emit(r, c)
+        self.event_toggle_flag_cell.emit(r, c)
         cell = self.gameBoard.get_cell(r, c)
         if cell.revealed:
             return
@@ -179,7 +206,7 @@ class BoardManager:
         if flag_count != cell.number:
             return
         
-        self.on_chord_click_cell.emit(r, c)
+        self.event_chord_click_cell.emit(r, c)
         exploded = False
         for dr in [-1, 0, 1]:
             for dc in [-1, 0, 1]:
@@ -188,21 +215,7 @@ class BoardManager:
                 nr = r + dr
                 nc = c + dc
                 if self.gameBoard.is_valid_position(nr, nc):
-                    neighbor = self.gameBoard.get_cell(nr, nc)
-                    if not neighbor.flagged and not neighbor.revealed:
-                        if neighbor.is_mine():
-                            neighbor.exploded = True
-                            neighbor.revealed = True
-                            exploded = True
-                        elif neighbor.is_number():
-                            neighbor.revealed = True
-                        else: # empty
-                            self.flood_fill(nr, nc)
-        if exploded:
-            self.game_over()
-            
-        self.update_board()
-        self.check_win_condition()
+                    self.on_reveal(nr, nc)
     
     @operation_check
     def on_chord_press(self, r:int, c:int):
@@ -215,7 +228,7 @@ class BoardManager:
         if flag_count != cell.number:
             return
             
-        self.on_chord_press_cell.emit(r, c)
+        self.event_chord_press_cell.emit(r, c)
         self.chord_holding = True
         # 臨時顯示周圍未標記格子的內容
         for dr in [-1, 0, 1]:
@@ -234,11 +247,11 @@ class BoardManager:
         """放開按鍵, 觸發 chord_click 的效果"""
         if not self.chord_holding:
             return
-        self.on_chord_release_cell.emit(r, c)
+        self.event_chord_release_cell.emit(r, c)
         self.chord_holding = False
         self.update_board()
         self.on_chord_click(r, c)
-    
+        
     def check_win_condition(self):
         """勝利唾手可得"""
         for r in range(self.gameBoard.height):
@@ -289,19 +302,20 @@ class BoardManager:
         self.is_game_over = True
         msg = f"遊戲結束{self.name} 踩到地雷了！"
         self.reveal_all_mines()
-        self.on_game_over.emit(msg)
+        self.event_game_over.emit(msg)
         
     def complete(self):
         self.is_game_over = True
         msg = f"{self.name}完成了!"
-        self.on_complete.emit(msg)
-    
+        self.event_complete.emit(msg)
+        
     def change_difficulty(self, config: DifficultyConfig):
         """更改難度"""
         self.gameBoard = GameBoard(config, self.name)
         self.buttons = []
         self.buttons_frame.destroy()
-        self.buttons_frame = LabelFrame(self.board_frame, text=self.name)
+        self.buttons_frame = Frame(self.board_frame)
+        # self.buttons_frame = LabelFrame(self.board_frame, text=self.name)
         self.buttons_frame.pack()
         
         for r in range(self.gameBoard.height):
