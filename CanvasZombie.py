@@ -77,6 +77,7 @@ class CanvasZombie(tk.Frame):
         self.canvas.bind("<Button-1>", self.mouse_click_handler)
 
         self.focus_set()  # 很重要！讓 Frame 接收鍵盤輸入
+
   
 
     def center_window(self, win, width=300, height=200):
@@ -86,95 +87,50 @@ class CanvasZombie(tk.Frame):
         win.geometry(f"{width}x{height}+{x}+{y}")
 
 
-    def setup_canvas_elements(self):
-        self.update_idletasks()  # 先確保畫面尺寸準確
+    def setup_canvas_elements(self, mode="title"):
+        self.update_idletasks()  # 確保畫面尺寸正確
 
+        # 背景圖片
         canvas_w = self.canvas.winfo_width()
         canvas_h = self.canvas.winfo_height()
         self.bg_id = self.canvas.create_image(canvas_w // 2, canvas_h // 2, anchor="center", image=self.bg_img)
 
+        # 分數、時間、Combo 顯示元件
+        self.timer_text_id = self.canvas.create_text(0, 0, text="", font=self.large_font, fill="white")
+        self.status_text_id = self.canvas.create_text(0, 0, text="", font=("微軟正黑體", 70, "bold"), fill="red")
+        self.combo_img_id = self.canvas.create_image(0, 0, anchor="n", image=None)
+        self.combo_text_id = self.canvas.create_text(0, 0, text="", font=self.large_font, fill="yellow", anchor="n")
+
+        # 七七 & 雷電將軍
         w = self.winfo_width()
-        h = self.winfo_height()
-        center_x = w // 2
-        center_y = h // 2
-
-        #分數
-        self.score_icon_id = None
-
-        # 時間
-        self.timer_text_id = self.canvas.create_text(center_x + 400, 180, text="", anchor="n", font=self.large_font, fill = 'white')
-        self.status_text_id = self.canvas.create_text(center_x, center_y, text="", font=("微軟正黑體", 70, "bold"), fill="red")
-
-
-        """
-        # 大時間（正中央，紅色）
-        self.big_timer_text_id = self.canvas.create_text(
-            w // 2, h // 2,
-            text="", 
-            font=("微軟正黑體", 120, "bold"),
-            fill="red",
-            anchor="center"
-        )
-        """
-        
-
-        #combo
-        self.combo_img_id = self.canvas.create_image(self.winfo_width() // 2 + 400, 220, anchor="n", image=None)
-        self.combo_text_id = self.canvas.create_text(self.winfo_width() // 2 + 400, 310, text="", font=self.large_font, fill="yellow", anchor="n")
-
-
-        #七七
         self.qiqi_id = self.canvas.create_image(w - 390, 200, anchor="nw", image=self.qiqi_img)
-        self.qiqi_text_id = self.canvas.create_text(w -200, 550, text="", font=self.large_font, fill="#BB00FF", anchor="center", width=400)
-
-        #雷電將軍
+        self.qiqi_text_id = self.canvas.create_text(w - 200, 550, text="", font=self.large_font, fill="#BB00FF", anchor="center", width=400)
         self.raiden_id = self.canvas.create_image(140, 275, anchor="nw", image=self.raiden_img)
         self.raiden_text_id = self.canvas.create_text(250, 560, text="", font=self.large_font, fill="#0000CC", anchor="center", width=400)
 
-        offset_x = 0 
-        offset_y = -10
+        # 按鈕
+        self.return_rect = self.canvas.create_rectangle(0, 0, 0, 0, fill="purple")
+        self.return_text = self.canvas.create_text(0, 0, text="返回主選單", font=self.large_font, fill="plum1")
+        self.button_rect = self.canvas.create_rectangle(0, 0, 0, 0, fill="purple")
+        self.button_text = self.canvas.create_text(0, 0, text="開始", font=self.large_font, fill="plum1")
 
-        # 返回主選單按鈕（保持原位）
-        return_button_left = w - 220 - offset_x
-        return_button_top = h - 100 - offset_y
-        return_button_right = w - 40 - offset_x
-        return_button_bottom = h - 40 - offset_y
+        self.countdown_image_id = self.canvas.create_image(self.winfo_width() // 2, self.winfo_height() // 2, anchor="center", image=None)
 
-        self.return_rect = self.canvas.create_rectangle(
-            return_button_left, return_button_top,
-            return_button_right, return_button_bottom,
-            fill="purple"
-        )
-        self.return_text = self.canvas.create_text(
-            (return_button_left + return_button_right) // 2,
-            (return_button_top + return_button_bottom) // 2,
-            text="返回主選單", font=self.large_font, fill="plum1"
-        )
+        # 遊戲標題只在 title 模式下顯示
+        if mode == "title":
+            base = os.path.dirname(__file__)
+            title_img_path = os.path.join(base, "Zombie圖片/遊戲標題.png")
+            raw_img = Image.open(title_img_path).resize((700, 500), Image.Resampling.LANCZOS)
+            self.title_img = ImageTk.PhotoImage(raw_img)
+            self.title_img_id = self.canvas.create_image(
+                self.winfo_width() // 2,
+                self.winfo_height() // 2 - 100,
+                image=self.title_img,
+                anchor="center"
+            )
 
-        # 開始按鈕（移到上方一段距離）
-        start_button_left = return_button_left
-        start_button_top = return_button_top - 80  # ← 上移 80 px
-        start_button_right = return_button_right
-        start_button_bottom = return_button_top - 20
+        self.update_button_positions(mode=mode)
 
-        self.button_rect = self.canvas.create_rectangle(
-            start_button_left, start_button_top,
-            start_button_right, start_button_bottom,
-            fill="purple"
-        )
-        self.button_text = self.canvas.create_text(
-            (start_button_left + start_button_right) // 2,
-            (start_button_top + start_button_bottom) // 2,
-            text="開始", font=self.large_font, fill="plum1"
-        )
-
-        #預留一個空的圖片物件放在畫面正中央。
-        self.countdown_image_id = self.canvas.create_image(
-            self.winfo_width() // 2,
-            self.winfo_height() // 2,
-            anchor="center",
-            image=None
-        )
 
     def quit_game(self):
         self.master.destroy()
@@ -210,6 +166,10 @@ class CanvasZombie(tk.Frame):
         yi_path = os.path.join(base, "Zombie圖片/分數數字/b.png")
         yi_img = Image.open(yi_path).resize((80, 80), Image.Resampling.LANCZOS)
         self.score_number_imgs["b"] = ImageTk.PhotoImage(yi_img)
+
+        #start exit
+        self.start_button_img = load("Zombie圖片/start.png", (180, 60))
+        self.exit_button_img = load("Zombie圖片/exit.png", (180, 60))
 
 
         zombie_aize = 150
@@ -255,10 +215,15 @@ class CanvasZombie(tk.Frame):
         coords = self.canvas.coords(self.button_rect)
         if coords[0] <= x <= coords[2] and coords[1] <= y <= coords[3]:
             self.ask_game_duration()
+
         if hasattr(self, "return_rect"):
             return_coords = self.canvas.coords(self.return_rect)
             if return_coords[0] <= x <= return_coords[2] and return_coords[1] <= y <= return_coords[3]:
-                self.quit_game()
+                current_text = self.canvas.itemcget(self.button_text, "text")
+                if current_text == "重新開始":
+                    self.reset_game_state()  # 在倒數中 or 遊戲中 → 回標題
+                else:
+                    self.quit_game()  # 標題畫面 → 直接退出
                 return
 
     def ask_game_duration(self):
@@ -266,6 +231,9 @@ class CanvasZombie(tk.Frame):
             self.game_time = t
             self.time_left = self.game_time
             win.destroy()
+            #消掉標題
+            if hasattr(self, 'title_img_id'):
+                self.canvas.delete(self.title_img_id)
             self.start_countdown()
 
         win = Toplevel(self)
@@ -326,6 +294,7 @@ class CanvasZombie(tk.Frame):
         parent.wait_window(top)
 
     def start_countdown(self):
+
         # 取消之前的倒數動畫
         for job in self.countdown_animation_jobs:
             self.after_cancel(job)
@@ -353,7 +322,7 @@ class CanvasZombie(tk.Frame):
                 self.current_zombie_imgs[r][c] = random.choice(self.zombie_imgs)
         self.combo = 0
         self.score = 0
-        self.game_running = False
+        self.game_running = True
         self.can_shoot = False
         self.update_texts()
         self.draw_rows()  
@@ -364,6 +333,9 @@ class CanvasZombie(tk.Frame):
         self.countdown_animation_jobs.append(self.after(1000, lambda: self.canvas.itemconfig(self.countdown_image_id, image=self.countdown_imgs[1])))  # 2
         self.countdown_animation_jobs.append(self.after(2000, lambda: self.canvas.itemconfig(self.countdown_image_id, image=self.countdown_imgs[2])))  # 1
         self.countdown_animation_jobs.append(self.after(3000, self.start_game))
+
+        self.canvas.itemconfig(self.button_text, text="重新開始")
+        self.update_button_positions(mode="game")#更新按鈕位置
 
 
 
@@ -389,6 +361,7 @@ class CanvasZombie(tk.Frame):
         self.draw_rows()
         self.countdown()
         self.canvas.itemconfig(self.button_text, text="重新開始")
+
 
 
     def countdown(self):
@@ -681,6 +654,8 @@ class CanvasZombie(tk.Frame):
         if name:
             self.save_score_to_db(name, score, time_mode)
 
+        self.reset_game_state()#回到最一開始有標題
+
     def save_score_to_db(self, name, score, play_time):
         self.cursor.execute("SELECT score FROM scores WHERE name = ? AND time = ?", (name, play_time))
         result = self.cursor.fetchone()
@@ -703,10 +678,13 @@ class CanvasZombie(tk.Frame):
         messagebox.showinfo("紀錄結果", f"{msg}\n{max_msg}")
     
     def on_window_resize(self, event=None):
-        self.canvas.delete("all")  # 把 canvas 上所有東西清乾淨
-        self.current_zombie_ids = [[None]*self.LANE_COUNT for _ in range(self.MAX_ROWS)]  # 重設 zombie id
-        self.setup_canvas_elements()  # 重建分數、時間、角色圖、按鈕
-        if self.game_running:  # 如果遊戲正在跑，才重畫 rows
+        self.canvas.delete("all")
+        self.current_zombie_ids = [[None] * self.LANE_COUNT for _ in range(self.MAX_ROWS)]
+        
+        mode = "game" if self.game_running else "title"
+        self.setup_canvas_elements(mode=mode)
+
+        if self.game_running:
             self.draw_rows()
     
     def miss_zombie_jump(self):
@@ -723,7 +701,7 @@ class CanvasZombie(tk.Frame):
         height = 50
 
         def easing(t):
-            # 使用簡單的拋物線公式，t ∈ [0,1]
+            # 拋物線公式[0,1]
             return -4 * height * (t - 0.5) ** 2 + height
 
         for i in range(steps + 1):
@@ -734,6 +712,104 @@ class CanvasZombie(tk.Frame):
                 self.canvas.coords(zombie_id)[0],
                 120 + row * self.row_height + d
             ))
+
+    def show_title_screen(self):
+        base = os.path.dirname(__file__)
+        title_img_path = os.path.join(base, "Zombie圖片/遊戲標題.png")
+        raw_img = Image.open(title_img_path).resize((700,500), Image.Resampling.LANCZOS)
+        self.title_img = ImageTk.PhotoImage(raw_img)
+        self.title_img_id = self.canvas.create_image(
+            self.winfo_width() // 2,
+            self.winfo_height() // 2 -100,
+            image=self.title_img,
+            anchor="center"
+        )
+        self.canvas.itemconfig(self.button_text, text="開始")
+        self.update_button_positions(mode="title")
+
+
+    def reset_game_state(self):
+        # 清除殭屍圖片
+        for r in range(self.MAX_ROWS):
+            for c in range(self.LANE_COUNT):
+                if self.current_zombie_ids[r][c]:
+                    self.canvas.delete(self.current_zombie_ids[r][c])
+                    self.current_zombie_ids[r][c] = None
+
+        # 清除分數、Combo 圖片顯示
+        for img_id in self.score_img_ids + self.big_timer_img_ids + self.combo_img_digits:
+            self.canvas.delete(img_id)
+        self.score_img_ids.clear()
+        self.big_timer_img_ids.clear()
+        self.combo_img_digits.clear()
+
+        # 清除 Combo 特效圖層
+        if hasattr(self, "combo_combo_img_id") and self.combo_combo_img_id:
+            self.canvas.delete(self.combo_combo_img_id)
+            self.combo_combo_img_id = None
+        if hasattr(self, "combo_x_img_id") and self.combo_x_img_id:
+            self.canvas.delete(self.combo_x_img_id)
+            self.combo_x_img_id = None
+
+        # 清除倒數計時圖片
+        if hasattr(self, "countdown_image_id") and self.countdown_image_id:
+            self.canvas.delete(self.countdown_image_id)
+            self.countdown_image_id = None
+
+        # 清除 TIMES UP 圖片
+        if hasattr(self, "times_up_image_id") and self.times_up_image_id:
+            self.canvas.delete(self.times_up_image_id)
+            self.times_up_image_id = None
+
+        # 清除七七和雷電將軍的對話框
+        self.canvas.itemconfig(self.qiqi_text_id, text="")
+        self.canvas.itemconfig(self.raiden_text_id, text="")
+
+        # 清空遊戲資料
+        self.rows.clear()
+        self.game_running = False
+        self.can_shoot = False
+
+        # 清除倒數動畫定時器
+        for job in self.countdown_animation_jobs:
+            self.after_cancel(job)
+        self.countdown_animation_jobs.clear()
+
+        if self.countdown_job:
+            self.after_cancel(self.countdown_job)
+            self.countdown_job = None
+
+        # 顯示標題畫面
+        self.show_title_screen()
+
+
+    def update_button_positions(self, mode="title"):
+        w = self.winfo_width()
+        h = self.winfo_height()
+
+        if mode == "title":
+            start_x = w // 2 - 100
+            start_y = h // 2 + 150
+            return_x = w // 2 - 100
+            return_y = start_y + 80
+        else:  
+            start_x = w - 220
+            start_y = h - 180
+            return_x = w - 220
+            return_y = h - 100
+
+        # 更新「開始 / 重新開始」按鈕位置
+        self.canvas.coords(self.button_rect, start_x, start_y, start_x + 180, start_y + 60)
+        self.canvas.coords(self.button_text, start_x + 90, start_y + 30)
+        self.canvas.coords(self.return_rect, return_x, return_y, return_x + 180, return_y + 60)
+        self.canvas.coords(self.return_text, return_x + 90, return_y + 30)
+
+        # 確保「返回主選單」顯示在最上層，不被任何東西遮住
+        self.canvas.tag_raise(self.return_rect)
+        self.canvas.tag_raise(self.return_text)
+
+
+
 
 if __name__ == "__main__":
     root = tk.Tk()

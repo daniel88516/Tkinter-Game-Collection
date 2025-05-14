@@ -78,7 +78,7 @@ class GameMenu:
 
         # 遊戲清單
         self.games = {
-            "Zombie": os.path.join(base_path, "Z_main.py"),
+            "再喝~再喝~": os.path.join(base_path, "Z_main.py"),
             "Monty Hall": os.path.join(base_path, "ThreeHall.py"),
             "井字遊戲": os.path.join(base_path, "TicTacToe.py"),
             "踩地雷(單人版)": os.path.join(base_path, "MineSweeper", "MineSweeper_SinglePlayer.py"),
@@ -113,7 +113,13 @@ class GameMenu:
                         bg="red", fg="white", activebackground="darkred", command=self.window.quit)
         exit_btn.pack(pady=10)
 
+        #紀錄正再跑的程式
+        self.running_processes = {} 
+
+
         self.window.mainloop()
+
+
 
 
 
@@ -130,7 +136,17 @@ class GameMenu:
             py_file = self.games.get(game_name)
             if py_file:
                 full_path = os.path.join(os.path.dirname(__file__), py_file)
-                subprocess.Popen(["python", full_path], shell=True)
+                
+                # 檢查該遊戲是否已經啟動
+                proc = self.running_processes.get(game_name)
+                if proc and proc.poll() is None:  # 還在跑
+                    messagebox.showinfo("提示", f"{game_name} 已經啟動了！")
+                    return
+
+                # 沒有在跑，啟動新的
+                new_proc = subprocess.Popen(["python", full_path], shell=True)
+                self.running_processes[game_name] = new_proc
+
                 
     def show_game_tutorial(self):
         selected_item = self.tree.selection()
