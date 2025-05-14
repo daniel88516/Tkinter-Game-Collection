@@ -36,13 +36,20 @@ class ZMain(Frame):
         self.ranking_page = RankingPage(self.notebook)
         self.ranking_page.pack(fill="both", expand=True)
         self.notebook.add(self.ranking_page, text="🏆 排行榜")
+        
         self.notebook.bind("<<NotebookTabChanged>>", self.on_tab_changed)
+
         
     def on_tab_changed(self, event):
         current_tab = event.widget.select()
         selected_widget = event.widget.nametowidget(current_tab)
-        if isinstance(selected_widget, (CanvasZombie, CanvasZombie)):
+
+        if isinstance(selected_widget, CanvasZombie):
             selected_widget.focus_set()
+            if self.notebook.index(current_tab) == 0:  
+                selected_widget.update_idletasks()     
+                selected_widget.canvas.update()       
+
 
 # main
 if __name__ == "__main__":
