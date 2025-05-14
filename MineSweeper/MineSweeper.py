@@ -59,8 +59,6 @@ class MineSweeper:
         self.network_manager:NetworkManager = NetworkManager()
         self.chat_manager:ChatManager = ChatManager()
         
-        self.message_var:StringVar = StringVar(value="")
-        self.game_started:bool = False
         self.countdown_timer = CountDownTimer(self.container)
          
     def create_gameBoard(self):
@@ -176,6 +174,7 @@ class MineSweeper:
         
     def center_window(self):
         """調整視窗大小和位置，比合適大小再大一圈"""
+        self.window.geometry('')
         self.window.update_idletasks()
 
         window_width = self.window.winfo_width()

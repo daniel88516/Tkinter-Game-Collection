@@ -70,21 +70,27 @@ class BoardManager:
         """創建 UI"""
         
         # 顯示計時 Label
-        self.timer_label = Label(self.board_frame, textvariable=self.countup_timer.countdown_var, font=(None, 12))
-        self.timer_label.pack(pady=(0,5))
+        self.info_frame = Frame(self.board_frame)
+        self.info_frame.pack(fill=X,pady=(0,5))
         
+        self.timer_label = Label(self.info_frame, textvariable=self.countup_timer.countdown_var, font=(None, 12))
+        self.timer_label.pack(side=LEFT, anchor=W)
+        
+        # 技能施放按鈕區塊
+        self.skill_frame = Frame(self.info_frame)
+        self.skill_frame.pack(side=RIGHT, anchor=E)
+        
+        self.safe_reveal_button = Button(self.skill_frame, text="安全展開", command=self.on_toggle_safe_reveal_var)
+        self.safe_reveal_button.pack()
+ 
         # 遊戲板按鈕
         self.buttons_frame = Frame(self.board_frame)
         # self.buttons_frame = LabelFrame(self.board_frame, text=self.name)
         self.buttons_frame.pack()
         
-        # 技能施放按鈕區塊
-        self.skill_frame = Frame(self.board_frame)
-        self.safe_reveal_button = Button(self.skill_frame, text="安全展開", command=self.on_toggle_safe_reveal_var)
         # change_difficulty 會呼叫 reset
         self.change_difficulty(DifficultyConfig(Difficulty.EASY))
-        self.safe_reveal_button.pack()
-        self.skill_frame.pack(pady=(5,0))
+        
 
     def start_timer(self):
         self.is_game_started = True
