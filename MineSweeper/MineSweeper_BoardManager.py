@@ -113,9 +113,9 @@ class BoardManager:
         self.is_game_started = False
         self.is_game_over = False
         self.first_click = True
-        self.safe_reveal_var = False
+        self.safe_reveal_var = True
         
-        self.safe_reveal_button.config(image=self.tile_images["LightOff"])
+        self.safe_reveal_button.config(image=self.tile_images["LightOn"])
         self.safe_reveal_button.config(state=DISABLED)
         
         self.gameBoard.reset()
