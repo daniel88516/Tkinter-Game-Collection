@@ -294,48 +294,58 @@ class CanvasZombie(tk.Frame):
         parent.wait_window(top)
 
     def start_countdown(self):
-
-        # 取消之前的倒數動畫
-        for job in self.countdown_animation_jobs:
-            self.after_cancel(job)
-        self.countdown_animation_jobs.clear()
-
-        # 取消之前正在跑的 countdown
+        # 先清除舊東西
         if self.countdown_job:
             self.after_cancel(self.countdown_job)
             self.countdown_job = None
 
+        for job in self.countdown_animation_jobs:
+            self.after_cancel(job)
+        self.countdown_animation_jobs.clear()
 
-        # 重建 countdown image 物件
+        if self.countdown_image_id:
+            self.canvas.delete(self.countdown_image_id)
+            self.countdown_image_id = None
+
+        # 建立新圖層
         self.countdown_image_id = self.canvas.create_image(
             self.winfo_width() // 2,
             self.winfo_height() // 2,
             anchor="center",
             image=None
         )
-        self.times_up_image_id = self.canvas.create_image(self.winfo_width() // 2, self.winfo_height() // 2, anchor="center", image=None)
 
-
+        # data ready
         self.rows = [random.randint(0, self.LANE_COUNT - 1) for _ in range(self.MAX_ROWS)]
         for r in range(self.MAX_ROWS):
             for c in range(self.LANE_COUNT):
                 self.current_zombie_imgs[r][c] = random.choice(self.zombie_imgs)
+
         self.combo = 0
         self.score = 0
         self.game_running = True
         self.can_shoot = False
         self.update_texts()
-        self.draw_rows()  
+        self.draw_rows()
 
-        self.canvas.itemconfig(self.status_text_id, text="")  # 清空文字
-        self.canvas.itemconfig(self.countdown_image_id, image=self.countdown_imgs[0])  # 3
-        self.canvas.tag_raise(self.countdown_image_id) 
-        self.countdown_animation_jobs.append(self.after(1000, lambda: self.canvas.itemconfig(self.countdown_image_id, image=self.countdown_imgs[1])))  # 2
-        self.countdown_animation_jobs.append(self.after(2000, lambda: self.canvas.itemconfig(self.countdown_image_id, image=self.countdown_imgs[2])))  # 1
-        self.countdown_animation_jobs.append(self.after(3000, self.start_game))
+        # 倒數動畫
+        self.canvas.itemconfig(self.status_text_id, text="")
+        self.canvas.itemconfig(self.countdown_image_id, image=self.countdown_imgs[0])  # 顯示 "3"
+        self.canvas.tag_raise(self.countdown_image_id)
 
+        self.countdown_animation_jobs.append(
+            self.after(1000, lambda: self.canvas.itemconfig(self.countdown_image_id, image=self.countdown_imgs[1]))  # 2
+        )
+        self.countdown_animation_jobs.append(
+            self.after(2000, lambda: self.canvas.itemconfig(self.countdown_image_id, image=self.countdown_imgs[2]))  # 1
+        )
+        self.countdown_animation_jobs.append(
+            self.after(3000, self.start_game)  # 倒數結束，開始遊戲
+        )
+
+        # 更新按鈕位置
         self.canvas.itemconfig(self.button_text, text="重新開始")
-        self.update_button_positions(mode="game")#更新按鈕位置
+        self.update_button_positions(mode="game")
 
 
 
@@ -729,21 +739,21 @@ class CanvasZombie(tk.Frame):
 
 
     def reset_game_state(self):
-        # 清除殭屍圖片
+        # 清除殭屍
         for r in range(self.MAX_ROWS):
             for c in range(self.LANE_COUNT):
                 if self.current_zombie_ids[r][c]:
                     self.canvas.delete(self.current_zombie_ids[r][c])
                     self.current_zombie_ids[r][c] = None
 
-        # 清除分數、Combo 圖片顯示
+        # 清除 分數 Combo 
         for img_id in self.score_img_ids + self.big_timer_img_ids + self.combo_img_digits:
             self.canvas.delete(img_id)
         self.score_img_ids.clear()
         self.big_timer_img_ids.clear()
         self.combo_img_digits.clear()
 
-        # 清除 Combo 特效圖層
+        # 清除 Combo 圖層
         if hasattr(self, "combo_combo_img_id") and self.combo_combo_img_id:
             self.canvas.delete(self.combo_combo_img_id)
             self.combo_combo_img_id = None
@@ -751,36 +761,41 @@ class CanvasZombie(tk.Frame):
             self.canvas.delete(self.combo_x_img_id)
             self.combo_x_img_id = None
 
-        # 清除倒數計時圖片
-        if hasattr(self, "countdown_image_id") and self.countdown_image_id:
-            self.canvas.delete(self.countdown_image_id)
-            self.countdown_image_id = None
-
-        # 清除 TIMES UP 圖片
-        if hasattr(self, "times_up_image_id") and self.times_up_image_id:
-            self.canvas.delete(self.times_up_image_id)
-            self.times_up_image_id = None
-
-        # 清除七七和雷電將軍的對話框
-        self.canvas.itemconfig(self.qiqi_text_id, text="")
-        self.canvas.itemconfig(self.raiden_text_id, text="")
-
-        # 清空遊戲資料
-        self.rows.clear()
-        self.game_running = False
-        self.can_shoot = False
-
-        # 清除倒數動畫定時器
-        for job in self.countdown_animation_jobs:
-            self.after_cancel(job)
-        self.countdown_animation_jobs.clear()
-
+        # 清除倒數動畫  圖片 
+        # 清除倒數排程
         if self.countdown_job:
             self.after_cancel(self.countdown_job)
             self.countdown_job = None
 
-        # 顯示標題畫面
+        for job in self.countdown_animation_jobs:
+            self.after_cancel(job)
+        self.countdown_animation_jobs.clear()
+
+        # 刪除倒數
+        if self.countdown_image_id:
+            self.canvas.delete(self.countdown_image_id)
+            self.countdown_image_id = None
+
+        if hasattr(self, "times_up_image_id") and self.times_up_image_id:
+            self.canvas.delete(self.times_up_image_id)
+            self.times_up_image_id = None
+
+        # 清除七七和雷電將軍的對話
+        self.canvas.itemconfig(self.qiqi_text_id, text="")
+        self.canvas.itemconfig(self.raiden_text_id, text="")
+
+        # 重置
+        self.rows.clear()
+        self.game_running = False
+        self.can_shoot = False
+        self.combo = 0
+        self.score = 0
+
+        # 回主選單
         self.show_title_screen()
+
+
+
 
 
     def update_button_positions(self, mode="title"):
