@@ -146,10 +146,10 @@ class ChatManager:
         # 新增圖片按鈕區域
         image_button_frame = Frame(chat_input_frame)
         image_button_frame.pack(
-            side="bottom",
-            fill="x",
+            side=BOTTOM,
+            fill=X,
             padx=5,
-            pady=5
+            pady=5,
         )
 
         # 載入圖片並新增按鈕

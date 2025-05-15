@@ -51,6 +51,8 @@ class MineSweeper:
         self.tile_images["TileFlag"]     = PhotoImage(file=os.path.join(base_path, "TileFlag.png"))
         self.tile_images["TileUnknown"]  = PhotoImage(file=os.path.join(base_path, "TileUnknown.png"))
         self.tile_images["TileMine"]     = PhotoImage(file=os.path.join(base_path, "TileMine.png"))
+        self.tile_images["LightOn"]      = PhotoImage(file=os.path.join(base_path, "LightOn.png"))
+        self.tile_images["LightOff"]     = PhotoImage(file=os.path.join(base_path, "LightOff.png"))
         
     def create_variable(self):
         self.debug_mode = BooleanVar(value=False)

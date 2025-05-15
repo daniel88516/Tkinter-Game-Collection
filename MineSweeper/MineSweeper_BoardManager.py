@@ -72,15 +72,18 @@ class BoardManager:
         # 顯示計時 Label
         self.info_frame = Frame(self.board_frame)
         self.info_frame.pack(fill=X,pady=(0,5))
-        
+                        
         self.timer_label = Label(self.info_frame, textvariable=self.countup_timer.countdown_var, font=(None, 12))
         self.timer_label.pack(side=LEFT, anchor=W)
-        
+                
         # 技能施放按鈕區塊
         self.skill_frame = Frame(self.info_frame)
         self.skill_frame.pack(side=RIGHT, anchor=E)
         
-        self.safe_reveal_button = Button(self.skill_frame, text="安全展開", command=self.on_toggle_safe_reveal_var)
+        self.safe_reveal_button = Button(self.skill_frame, 
+                                         image=self.tile_images["LightOn"],
+                                         relief=FLAT,
+                                         command=self.on_toggle_safe_reveal_var)
         self.safe_reveal_button.pack()
  
         # 遊戲板按鈕
@@ -112,7 +115,7 @@ class BoardManager:
         self.first_click = True
         self.safe_reveal_var = False
         
-        self.safe_reveal_button.config(text="安全展開")
+        self.safe_reveal_button.config(image=self.tile_images["LightOff"])
         self.safe_reveal_button.config(state=DISABLED)
         
         self.gameBoard.reset()
@@ -169,7 +172,7 @@ class BoardManager:
                 cell.flagged = True
                 cell.revealed = True 
                 self.safe_reveal_var = False
-                self.safe_reveal_button.config(text="安全展開")
+                self.safe_reveal_button.config(image=self.tile_images["LightOff"])
                 self.safe_reveal_button.config(state=DISABLED)
             else: 
                 cell.exploded = True
@@ -186,7 +189,7 @@ class BoardManager:
     def on_toggle_safe_reveal_var(self):
         self.event_toggle_safe_reveal_var.emit()
         self.safe_reveal_var = not self.safe_reveal_var
-        self.safe_reveal_button.config(foreground="green" if self.safe_reveal_var == True else "red")
+        self.safe_reveal_button.config(image=self.tile_images["LightOn"] if self.safe_reveal_var == True else self.tile_images["LightOff"])
         
     def on_toggle_flag(self, r:int, c:int):
         """你按下了右鍵插旗子"""        
