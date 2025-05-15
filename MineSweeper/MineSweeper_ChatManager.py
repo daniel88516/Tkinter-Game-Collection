@@ -2,6 +2,7 @@ import os
 from tkinter import *
 from PIL import Image, ImageTk
 from MineSweeper_Event import MyEvent
+import random
 
 class ChatManager:
     def __init__(self):
@@ -21,7 +22,16 @@ class ChatManager:
             "cry": os.path.join(base_path, "Images", "Stickers", "cry.png"),
             "doubt": os.path.join(base_path, "Images", "Stickers", "doubt.png"),
         }
-
+        
+        self.final_message: list[str] = [
+            "試圖在地雷中優雅地跳芭蕾", 
+            "被逐出了人界",
+            "想證明地雷很安全，他失敗了",
+            "被地雷排除了",
+            "被炸得血肉模糊",
+            "忘了金屬探測器怎麼用", 
+            "被絆倒了",
+        ]
 
     def create_events(self):
         self.on_send_message:MyEvent = MyEvent()
@@ -127,7 +137,7 @@ class ChatManager:
         #     bottom_frame,
         #     text="傳送",
         #     command=self.send_message,
-        #     state=DISABLED
+        #     state=ACTIVE
         # )
         # self.send_btn.pack(
         #     side="left"
@@ -169,14 +179,12 @@ class ChatManager:
                 self.sticker_btns.append(btn)
             except Exception as e:
                 print(f"無法載入圖片 {path}: {e}")
- 
     
     def send_image(self, sticker_name):
         self.add_message(sticker_name, from_self=True, is_image=True)
         self.on_send_image.emit(sticker_name)
         self.start_image_cooldown()
 
-    
     def add_message(self, content, from_self, is_image=False):
         """新增訊息，支援文字和圖片"""
         # 一定要讓 message_frame 填滿寬度
@@ -226,7 +234,7 @@ class ChatManager:
 
         # 依 from_self 決定 side
         label.pack(
-            side=LEFT if from_self else RIGHT,
+            side=RIGHT if from_self else LEFT,
             padx=10
         )
         # 新增完訊息就滑到底
@@ -264,6 +272,10 @@ class ChatManager:
         self.config_buttons(state=ACTIVE)
         self.after_id = None
     
+    def get_random_final_message(self) -> str:
+        """隨機選擇一個訊息傳送"""
+        return random.choice(self.final_message)
+        
 if __name__=="__main__":
     window:Tk = Tk()
     chat_manager = ChatManager()

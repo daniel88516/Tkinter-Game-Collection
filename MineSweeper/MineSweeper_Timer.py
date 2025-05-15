@@ -7,8 +7,8 @@ class CountDownTimer:
         self.create_variable()
 
     def create_events(self):
-        self.on_counter_change:MyEvent = MyEvent()
-        self.on_count_end:MyEvent = MyEvent()
+        self.event_counter_change:MyEvent = MyEvent()
+        self.event_count_end:MyEvent = MyEvent()
         
     def create_variable(self):
         self.countdown_var:IntVar = IntVar(value=3)
@@ -33,12 +33,12 @@ class CountDownTimer:
             current_time = current_time - 1
             self.countdown_var.set(current_time)
             self.after_id = self.container.after(1000, self.update_countdown)
-            self.on_counter_change.emit(msg)
+            self.event_counter_change.emit(msg)
         else:
             msg = "開始!"
             print(msg)
-            self.on_counter_change.emit(msg)
-            self.on_count_end.emit()
+            self.event_counter_change.emit(msg)
+            self.event_count_end.emit()
             self.reset()
             
 class CountUpTimer:

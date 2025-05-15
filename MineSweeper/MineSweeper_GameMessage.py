@@ -14,6 +14,7 @@ class GameMessageType(Enum):
     CHORD_RELEASE = auto()
     GAME_OVER = auto()
     GAME_COMPLETE = auto()
+    TOGGLE_SAFE_REVEAL_VAR = auto()
     RESET = auto()
     CHANGE_DIFFICULTY = auto()
     IMAGE = auto()

@@ -34,11 +34,12 @@ class NetworkManager:
         self.client_port_var:StringVar = StringVar(value="12345")
         
     def create_widget(self, parent_frame:Frame):
-        self.network_frame = parent_frame
-        self.network_frame.pack(side=TOP)
+        # self.network_frame = parent_frame
+        self.network_frame = Frame(parent_frame)
+        self.network_frame.pack(padx=20, side=LEFT)
         
         server_frame = LabelFrame(self.network_frame, text="伺服器設定")
-        server_frame.pack(padx=10, fill="x", side=LEFT)
+        server_frame.pack(pady=10, fill="x", side=TOP)
         
         Label(server_frame, text="IP:").grid(row=0, column=0)
         self.server_ip_entry = Entry(server_frame, textvariable=self.server_ip_var)
@@ -63,7 +64,7 @@ class NetworkManager:
 
         # 客戶端區塊
         client_frame = LabelFrame(self.network_frame, text="客戶端設定")
-        client_frame.pack(padx=10, fill="x", side=LEFT)
+        client_frame.pack(pady=10, fill="x", side=BOTTOM)
 
         Label(client_frame, text="目標IP:").grid(row=0, column=0)
         self.client_ip_entry = Entry(client_frame, textvariable=self.client_ip_var)
@@ -86,6 +87,7 @@ class NetworkManager:
         )
         self.client_status.grid(row=4, columnspan=2, padx=5)
 
+    
     def get_local_ip(self):
         try:
             # 建立一個 UDP socket
@@ -370,3 +372,10 @@ class NetworkManager:
         else:
             self.server_status.config(fg="red", text=f"斷開連線{str(e)}")
         self.on_receive_message_failed.emit()
+
+if __name__=="__main__":
+    window:Tk = Tk()
+    networkManager = NetworkManager()
+    networkManager.create_widget(window)
+    window.mainloop()
+    
