@@ -90,21 +90,21 @@ class NetworkManager:
         )
         self.client_status.grid(row=4, columnspan=2, padx=5)
         
-        self.debug_frame = LabelFrame(self.network_frame, text="除錯工具")
-        # 使用 thread 接收訊息
-        self.debug_window = Toplevel(parent_frame)
-        self.debug_window.title("除錯工具")
-        self.debug_window.geometry("300x200")
-        self.debug_frame = LabelFrame(self.debug_window, text="除錯工具")
-        self.debug_frame.pack(padx=10, pady=10, fill="both", expand=True)
+        # self.debug_frame = LabelFrame(self.network_frame, text="除錯工具")
+        # # 使用 thread 接收訊息
+        # self.debug_window = Toplevel(parent_frame)
+        # self.debug_window.title("除錯工具")
+        # self.debug_window.geometry("300x200")
+        # self.debug_frame = LabelFrame(self.debug_window, text="除錯工具")
+        # self.debug_frame.pack(padx=10, pady=10, fill="both", expand=True)
 
-        Button(self.debug_frame, text="儲存傳送訊息", command=self.export_sent_messages).pack(fill="x", pady=2)
-        Button(self.debug_frame, 
-            text="發送測試訊息", 
-            command=lambda: threading.Thread(target=self.auto_sent_message, daemon=True).start()).pack(fill="x", pady=2)
-        Button(self.debug_frame, 
-            text="接收測試訊息", 
-            command=lambda: threading.Thread(target=self.auto_receive_message, daemon=True).start()).pack(fill="x", pady=2)
+        # Button(self.debug_frame, text="儲存傳送訊息", command=self.export_sent_messages).pack(fill="x", pady=2)
+        # Button(self.debug_frame, 
+        #     text="發送測試訊息", 
+        #     command=lambda: threading.Thread(target=self.auto_sent_message, daemon=True).start()).pack(fill="x", pady=2)
+        # Button(self.debug_frame, 
+        #     text="接收測試訊息", 
+        #     command=lambda: threading.Thread(target=self.auto_receive_message, daemon=True).start()).pack(fill="x", pady=2)
     
     def get_local_ip(self):
         try:
