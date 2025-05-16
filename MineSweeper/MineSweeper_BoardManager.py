@@ -80,11 +80,11 @@ class BoardManager:
         self.skill_frame = Frame(self.info_frame)
         self.skill_frame.pack(side=RIGHT, anchor=E)
         
-        self.safe_reveal_button = Button(self.skill_frame, 
+        self.safe_reveal_btn = Button(self.skill_frame, 
                                          image=self.tile_images["LightOn"],
                                          relief=FLAT,
                                          command=self.on_toggle_safe_reveal_var)
-        self.safe_reveal_button.pack()
+        self.safe_reveal_btn.pack()
  
         # 遊戲板按鈕
         self.buttons_frame = Frame(self.board_frame)
@@ -101,7 +101,7 @@ class BoardManager:
         self.countup_timer.start_countdown()
 
     def stop_timer(self):
-        self.countup_timer.stop_countdown()
+        self.countup_timer.stop_countup()
 
     def get_timer_value(self):
         return self.countup_timer.countdown_var.get()
@@ -115,8 +115,8 @@ class BoardManager:
         self.first_click = True
         self.safe_reveal_var = True
         
-        self.safe_reveal_button.config(image=self.tile_images["LightOn"])
-        self.safe_reveal_button.config(state=DISABLED)
+        self.safe_reveal_btn.config(image=self.tile_images["LightOn"])
+        self.safe_reveal_btn.config(state=DISABLED)
         
         self.gameBoard.reset()
         self.countup_timer.reset()
@@ -159,7 +159,7 @@ class BoardManager:
         # 第一次按下的時候, 才擺放地雷
         if self.first_click:
             if self.is_opponent == False:
-                self.safe_reveal_button.config(state=ACTIVE)
+                self.safe_reveal_btn.config(state=ACTIVE)
             self.first_click = False
             self.event_first_reveal_cell.emit(r, c, seed)
             self.gameBoard.place_mines(r, c, seed)
@@ -172,8 +172,8 @@ class BoardManager:
                 cell.flagged = True
                 cell.revealed = True 
                 self.safe_reveal_var = False
-                self.safe_reveal_button.config(image=self.tile_images["LightOff"])
-                self.safe_reveal_button.config(state=DISABLED)
+                self.safe_reveal_btn.config(image=self.tile_images["LightOff"])
+                self.safe_reveal_btn.config(state=DISABLED)
             else: 
                 cell.exploded = True
                 cell.revealed = True
@@ -189,7 +189,7 @@ class BoardManager:
     def on_toggle_safe_reveal_var(self):
         self.event_toggle_safe_reveal_var.emit()
         self.safe_reveal_var = not self.safe_reveal_var
-        self.safe_reveal_button.config(image=self.tile_images["LightOn"] if self.safe_reveal_var == True else self.tile_images["LightOff"])
+        self.safe_reveal_btn.config(image=self.tile_images["LightOn"] if self.safe_reveal_var == True else self.tile_images["LightOff"])
         
     def on_toggle_flag(self, r:int, c:int):
         """你按下了右鍵插旗子"""        

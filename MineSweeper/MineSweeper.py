@@ -42,7 +42,7 @@ class MineSweeper:
         
     def load_images(self):
         """加載圖片"""
-        base_path = os.path.join(os.path.dirname(__file__), f"Images/MineSweeper/")
+        base_path = os.path.join(os.path.dirname(__file__), f"Images/UI/")
         self.tile_images = {}
         for i in range(1, 9):
             self.tile_images[f"Tile{i}"] = PhotoImage(file=os.path.join(base_path, f"Tile{i}.png"))
@@ -225,7 +225,7 @@ class MineSweeper:
             self.chat_manager.add_message("對手已準備", from_self=False)
         else:
             self.chat_manager.add_message("對手未準備", from_self=False)
-            self.player_board.countup_timer.stop_countdown()
+            self.player_board.countup_timer.stop_countup()
             self.countdown_timer.reset()
             
         if self.can_start_game():

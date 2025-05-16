@@ -74,7 +74,7 @@ class CountUpTimer:
         self.after_id:int | None = None
         
     def reset(self):
-        self.stop_countdown()
+        self.stop_countup()
         self.second = 0
         self.countdown_var.set("未開始")
         self.after_id = None
@@ -91,7 +91,7 @@ class CountUpTimer:
         self.on_counter_change.emit()
         self.after_id = self.container.after(1000, self.update_countdown)
 
-    def stop_countdown(self):
+    def stop_countup(self):
         if self.after_id is not None:
             self.container.after_cancel(self.after_id)
             self.after_id = None
