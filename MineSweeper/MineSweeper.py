@@ -383,8 +383,8 @@ class MineSweeper:
         )
         self.network_manager.send_game_message(message)
         
-        messagebox.showinfo(title="遊戲結果", message=msg)
         self.chat_manager.add_message(f"你{self.chat_manager.get_random_final_message()}", from_self=True)
+        messagebox.showinfo(title="遊戲結果", message=msg)
         self.new_game()
         self.config_control_panel_buttons(ACTIVE)
               
@@ -400,8 +400,8 @@ class MineSweeper:
             type=GameMessageType.GAME_COMPLETE,
             data={"result":" 對方完成了!"}
         )
-        messagebox.showinfo(title="遊戲結果", message=msg)
         self.network_manager.send_game_message(message)
+        messagebox.showinfo(title="遊戲結果", message=msg)
         if self.opponent_board.is_game_over:
             self.chat_manager.add_message(f"{self.player_board.get_timer_value()} vs {self.opponent_board.get_timer_value()}", from_self=True)
             self.new_game()
@@ -418,8 +418,8 @@ class MineSweeper:
     def on_opponent_game_complete(self, msg:str):
         self.chat_manager.add_message(f"{msg}", from_self=False)
         if self.player_board.is_game_over:
-            messagebox.showerror(title="遊戲結果", message=msg)
             self.chat_manager.add_message(f"{self.player_board.get_timer_value()} vs {self.opponent_board.get_timer_value()}", from_self=True)
+            messagebox.showerror(title="遊戲結果", message=msg)
             self.new_game()
             self.config_control_panel_buttons(ACTIVE)
         
