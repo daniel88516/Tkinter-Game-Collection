@@ -420,7 +420,7 @@ class NetworkManager:
                 time.sleep(interval)
                 print(f"自動傳送訊息: {msg}")  
                 
-    def auto_receive_message(self, filename="received_messages.log"):
+    def auto_receive_message(self, filename="sent_messages.log"):
         with open(filename, "r", encoding="utf-8") as f:
             lines = f.readlines()
             for line in lines:
