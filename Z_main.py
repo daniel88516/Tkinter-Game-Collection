@@ -47,9 +47,9 @@ class ZMain(Frame):
 
         if isinstance(selected_widget, CanvasZombie):
             selected_widget.focus_set()
-            if self.notebook.index(current_tab) == 0:  
-                selected_widget.update_idletasks()     
-                selected_widget.canvas.update()       
+            if self.notebook.index(current_tab) == 0:
+                selected_widget.update_idletasks()
+                selected_widget.canvas.update()
 
 
 # main
