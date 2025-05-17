@@ -136,8 +136,8 @@ class MineSweeper(Frame):
         self.reset_button = Button(control_frame, text="重置遊戲", command=self.new_game)
         self.reset_button.pack()
         
-        self.debug_button = Button(control_frame, text="Debug 模式：關閉", command=self.toggle_debug_mode)
-        self.debug_button.pack(side=LEFT, padx=5)
+        # self.debug_button = Button(control_frame, text="Debug 模式：關閉", command=self.toggle_debug_mode)
+        # self.debug_button.pack(side=LEFT, padx=5)
 
     def center_window(self):
         """讓視窗自適應大小, 然後置中"""
