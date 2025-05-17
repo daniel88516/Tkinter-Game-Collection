@@ -1,19 +1,23 @@
 from tkinter import *
 from tkinter import messagebox
 import os, random
-from MineSweeper_SinglePlayer_Difficulty import DifficultyConfig, Difficulty
-from MineSweeper_SinglePlayer_GameBoard import GameBoard
-from MineSweeper_Timer import CountUpTimer
+from functools import wraps
+from MineSweeper_Difficulty import DifficultyConfig, Difficulty
+from MineSweeper_GameBoard import GameBoard
+from MineSweeper_Timer import HighPrecisionCountUpTimer
+
+def operation_check(method):
+    @wraps(method)
+    def wrapper(self, *args, **kwargs):
+        if getattr(self, "is_game_over", True):
+            return
+        return method(self, *args, **kwargs)
+    return wrapper
 class MineSweeper:
     """初始化"""
     def __init__(self, window:Tk, difficulty: Difficulty=Difficulty.NORMAL):
         # 根據難度初始化遊戲場地
-        self.config = DifficultyConfig(difficulty)
-        self.gameBoard:GameBoard = GameBoard(
-            self.config.board_width,
-            self.config.board_height,
-            self.config.mine_count
-        )
+        self.gameBoard:GameBoard = GameBoard(DifficultyConfig(difficulty))
         self.buttons: list[list[Button]] = []
                     
         self.window:Tk = window
@@ -69,7 +73,7 @@ class MineSweeper:
         self.info_frame = Frame(self.frame)
         self.info_frame.pack(pady=5, fill=X)
         
-        self.countup_timer:CountUpTimer = CountUpTimer(self.frame)
+        self.countup_timer = HighPrecisionCountUpTimer(self.frame)
         self.timer_label = Label(self.info_frame, textvariable=self.countup_timer.countdown_var, font=("Arial", 12))
         self.timer_label.pack(side=LEFT, anchor=W)
         
@@ -119,7 +123,8 @@ class MineSweeper:
             ).pack(side=LEFT, padx=5)
         
         # 按下 r, reset 
-        self.window.bind("<r>", lambda event: self.new_game())
+        self.window.bind("<space>", lambda event: self.new_game())
+        self.window.bind("<Return>", lambda event:  self.new_game())
         self.reset_button = Button(control_frame, text="重置遊戲", command=self.new_game)
         self.reset_button.pack()
         
@@ -146,6 +151,17 @@ class MineSweeper:
         self.debug_button.config(text=f"Debug 模式：{'開啟' if self.debug_mode else '關閉'}")
         self.update_board()
         
+    """計時器相關函數"""
+    def start_timer(self):
+        self.countup_timer.reset()
+        self.countup_timer.start_countup()
+
+    def stop_timer(self):
+        self.countup_timer.stop_countup()
+
+    def get_timer_value(self):
+        return self.countup_timer.countdown_var.get()
+    
     """遊戲邏輯"""
     def flood_fill(self, r, c):
         if not self.gameBoard.is_valid_position(r, c):
@@ -180,8 +196,9 @@ class MineSweeper:
     def game_over(self):
         """你爆炸了"""
         self.reveal_all_mines()
-        messagebox.showinfo("遊戲結束", self.get_random_final_message())
-        self.new_game()
+        self.is_game_over = True
+        self.stop_timer()
+        messagebox.showerror("遊戲結束", f"{self.get_random_final_message()}, 成功在{self.get_timer_value()}內失敗了!")
         
     def check_win_condition(self):
         """勝利唾手可得"""
@@ -191,26 +208,24 @@ class MineSweeper:
                 if not cell.is_mine() and not cell.revealed:
                     return
         self.is_game_over = True
-        self.countup_timer.stop_countup()
-        messagebox.showinfo("恭喜", f"你在{self.countup_timer.countdown_var.get()}內贏得了遊戲！")
+        self.stop_timer()
+        messagebox.showinfo("恭喜", f"你在{self.get_timer_value()}內贏得了遊戲！")
         
     """滑鼠事件處理"""
+    @operation_check
     def on_left_click(self, r, c):
         """你按下了左鍵"""
-        if self.is_game_over:
-            return
-        
         # 第一次按下的時候, 才擺放地雷
         if self.first_click:
             self.safe_reveal_btn.config(state=ACTIVE)
-            self.gameBoard.place_mines(r, c)
+            self.gameBoard.place_mines(r, c, int.from_bytes(os.urandom(4), byteorder='big'))
             self.gameBoard.calculate_numbers()
-            self.countup_timer.start_countdown()
+            self.start_timer()
             self.first_click = False
 
         # 旗標不會被展開
         cell = self.gameBoard.get_cell(r, c)
-        if not cell.revealed and cell.flagged:
+        if cell.revealed or cell.flagged:
             return
 
         # 每次按下, 判斷是否為地雷
@@ -232,12 +247,9 @@ class MineSweeper:
         self.update_board()
         self.check_win_condition()
 
+    @operation_check
     def on_right_click(self, r, c):
         """你按下了右鍵插旗子"""
-        # 遊戲已經結束, 你來太晚了
-        if self.is_game_over:
-            return
-        
         # 你不能將旗子插在奇怪的位置
         cell = self.gameBoard.get_cell(r, c)
         if cell.revealed:
@@ -250,11 +262,9 @@ class MineSweeper:
         cell.flagged = not cell.flagged
         self.update_board()
 
+    @operation_check
     def on_chord_click(self, r, c):
-        """你想要抄近路，玩的快一些"""
-        if self.is_game_over:
-            return
-        
+        """你想要抄近路，玩的快一些"""        
         # 只能在 revealed, 且為數字的時候觸發
         cell = self.gameBoard.get_cell(r, c)
         if not cell.revealed or not cell.is_number():
@@ -264,7 +274,6 @@ class MineSweeper:
         if flag_count != cell.number:
             return
         
-        exploded = False
         for dr in [-1, 0, 1]:
             for dc in [-1, 0, 1]:
                 if dr == 0 and dc == 0:
@@ -272,26 +281,11 @@ class MineSweeper:
                 nr = r + dr
                 nc = c + dc
                 if self.gameBoard.is_valid_position(nr, nc):
-                    neighbor = self.gameBoard.get_cell(nr, nc)
-                    if not neighbor.flagged and not neighbor.revealed:
-                        if neighbor.is_mine():
-                            neighbor.exploded = True
-                            neighbor.revealed = True
-                            exploded = True
-                        elif neighbor.is_number():
-                            neighbor.revealed = True
-                        else: # empty
-                            self.flood_fill(nr, nc)
-        if exploded:
-            self.is_game_over = True
-            self.game_over()
-            
-        self.update_board()
+                    self.on_left_click(nr, nc)
     
+    @operation_check
     def on_chord_press(self, r, c):
         """想要展開時的「預視」效果"""
-        if self.is_game_over:
-            return
         
         cell = self.gameBoard.get_cell(r, c)
         if not cell.revealed or not cell.is_number():
@@ -364,18 +358,13 @@ class MineSweeper:
 
     def change_difficulty(self, difficulty: Difficulty):
         """切換難度"""
-        self.config = DifficultyConfig(difficulty)
-        self.gameBoard = GameBoard(
-            self.config.board_width,
-            self.config.board_height,
-            self.config.mine_count
-        )
+        self.gameBoard = GameBoard(DifficultyConfig(difficulty))
         self.buttons:list[list[Button]] = []
         self.frame.destroy()
         self.create_gameboard()
         self.center_window()
         self.new_game()
-        
+    
     def get_random_final_message(self) -> str:
         """隨機選擇一個訊息傳送"""
         return random.choice(self.final_message)

@@ -1,6 +1,6 @@
 from tkinter import IntVar, StringVar, Frame, PhotoImage
 from MineSweeper_Event import MyEvent
-import os 
+import os, time
 
 class CountDownTimer:
     def __init__(self, container:Frame):
@@ -46,24 +46,8 @@ class CountDownTimer:
 class CountUpTimer:
     def __init__(self, container:Frame):
         self.container:Frame = container
-        self.load_images()
         self.create_events()
         self.create_variable()
-
-    def load_images(self): 
-        """加載圖片"""
-        base_path = os.path.join(os.path.dirname(__file__), f"Images/Segment/")
-        self.tile_images = {}
-        self.tile_images["0"]    = PhotoImage(file=os.path.join(base_path, "0.png"))
-        self.tile_images["1"]    = PhotoImage(file=os.path.join(base_path, "1.png"))
-        self.tile_images["2"]    = PhotoImage(file=os.path.join(base_path, "2.png"))
-        self.tile_images["3"]    = PhotoImage(file=os.path.join(base_path, "3.png"))
-        self.tile_images["4"]    = PhotoImage(file=os.path.join(base_path, "4.png"))
-        self.tile_images["5"]    = PhotoImage(file=os.path.join(base_path, "5.png"))
-        self.tile_images["6"]    = PhotoImage(file=os.path.join(base_path, "6.png"))
-        self.tile_images["7"]    = PhotoImage(file=os.path.join(base_path, "7.png"))
-        self.tile_images["8"]    = PhotoImage(file=os.path.join(base_path, "8.png"))
-        self.tile_images["9"]    = PhotoImage(file=os.path.join(base_path, "9.png"))
         
     def create_events(self):
         self.on_counter_change:MyEvent = MyEvent()
@@ -79,24 +63,67 @@ class CountUpTimer:
         self.countdown_var.set("未開始")
         self.after_id = None
                 
-    def start_countdown(self):
+    def start_countup(self):
         if self.after_id is None:
-            self.update_countdown()
+            self.update_countup()
 
-    def update_countdown(self):
+    def update_countup(self):
         self.second = self.second + 1
         minutes = self.second // 60
         seconds = self.second % 60
         self.countdown_var.set(f"{minutes:02d}:{seconds:02d}")
         self.on_counter_change.emit()
-        self.after_id = self.container.after(1000, self.update_countdown)
+        self.after_id = self.container.after(1000, self.update_countup)
 
     def stop_countup(self):
         if self.after_id is not None:
             self.container.after_cancel(self.after_id)
             self.after_id = None
-            
-    def get_timer_image(self) -> list[PhotoImage]: 
-        return [self.tile_images["0"], self.tile_images["1"], self.tile_images["2"], self.tile_images["3"]]
-    
-    
+                
+class HighPrecisionCountUpTimer:
+    def __init__(self, container: Frame):
+        self.container: Frame = container
+        self.create_events()
+        self.create_variable()
+
+    def create_events(self):
+        self.on_counter_change: MyEvent = MyEvent()
+
+    def create_variable(self):
+        self.start_time: float | None = None
+        self.elapsed: float = 0.0
+        self.running: bool = False
+        self.countdown_var: StringVar = StringVar(value="未開始")
+        self.after_id: int | None = None
+
+    def reset(self):
+        self.stop_countup()
+        self.start_time = None
+        self.elapsed = 0.0
+        self.countdown_var.set("未開始")
+        self.after_id = None
+
+    def start_countup(self):
+        if not self.running:
+            self.running = True
+            self.start_time = time.perf_counter() - self.elapsed
+            self._update_high_precision()
+
+    def _update_high_precision(self):
+        if not self.running:
+            return
+        now = time.perf_counter()
+        self.elapsed = now - self.start_time
+        minutes = int(self.elapsed // 60)
+        seconds = int(self.elapsed % 60)
+        millis = int((self.elapsed - int(self.elapsed)) * 1000)
+        self.countdown_var.set(f"{minutes:02d}:{seconds:02d}.{millis:03d}")
+        self.on_counter_change.emit()
+        self.after_id = self.container.after(10, self._update_high_precision)  # 10ms 更新
+
+    def stop_countup(self):
+        if self.running:
+            self.running = False
+            if self.after_id is not None:
+                self.container.after_cancel(self.after_id)
+                self.after_id = None

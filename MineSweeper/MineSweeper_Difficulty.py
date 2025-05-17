@@ -24,7 +24,7 @@ class DifficultyConfig():
             "board_height": 16,
             "mine_count": 99,
             "name": "困難"
-        }
+        },
     }
     def __init__(self, difficulty: Difficulty):
         self.difficulty = difficulty
