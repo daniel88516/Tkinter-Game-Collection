@@ -1,0 +1,85 @@
+[33m7eb624e[m[33m ([m[1;36mHEAD -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m 單人模式更新
+[33m71e617e[m 單人模式完善
+[33mbc16cb0[m 各難度通關紀錄
+[33mf93a3ba[m 難度破關記錄
+[33m330aacb[m 除錯工具
+[33m0c56d42[m 圖片
+[33ma939a7f[m UI簡單更新
+[33m3f11a80[m Merge branch 'main' of https://github.com/daniel88516/TK-Game
+[33mb219c72[m 修復倒數殘影
+[33m774a3fc[m 踩地雷版面修改
+[33ma06b7e5[m Merge branch 'main' of https://github.com/daniel88516/TK-Game
+[33m8266211[m 加入安全展開
+[33m646cde5[m 分數更新
+[33m1c1bf50[m 大更新
+[33mbb7fd9e[m 讚
+[33mf99e61f[m Merge branch 'main' of https://github.com/daniel88516/TK-Game
+[33mc99e28c[m 分數可以用圖片顯示
+[33m0f948fc[m 視窗大小調整
+[33m02c8658[m Merge branch 'main' of https://github.com/daniel88516/TK-Game
+[33me9c8be4[m 更新資料庫設定
+[33m154cfdb[m 圖片大小更新
+[33m509273e[m 圖片路徑更新:
+[33m8ee11c2[m update
+[33m678aa5c[m import 更新
+[33m37fe7a9[m 圖片路徑更新
+[33m7c31613[m image_path update
+[33mfe24c32[m 數字用圖片實現
+[33me475e59[m 準備狀態同步問題修復
+[33m9e510d7[m 遊戲結束時間
+[33m65d45f4[m 禁止多台主機連線
+[33mc0fe1d3[m 圖片補回
+[33meda3147[m Merge branch 'main' of https://github.com/daniel88516/TK-Game
+[33mb041805[m MineSweeper 檔案移動
+[33m21b11bf[m Merge branch 'main' of https://github.com/daniel88516/TK-Game
+[33m9c85592[m 增加動畫
+[33m105de68[m 按鈕更新
+[33m672f15c[m 辨認host
+[33m823c09c[m Merge branch 'main' of https://github.com/daniel88516/TK-Game
+[33m4d0f6d5[m 主機分辨
+[33m8c1a078[m 調整殭屍格子高度
+[33mb64da41[m 修復bug
+[33mc5f229b[m 更新rand
+[33mc82876c[m 更新Zombie
+[33m748e8a8[m zombie大更新
+[33m31e5de1[m 圖片路徑更新
+[33m118a535[m 更新treeview
+[33mb95ea1a[m 更新TreeView
+[33m1540b96[m 圖片更新
+[33m5a7c63f[m GameMenu 遊戲路徑更新
+[33m62eeac8[m 貼圖傳送冷卻時間
+[33mf1548dd[m 貼圖
+[33mf0cc644[m 傳送貼圖功能
+[33m739c507[m MineSweeper遊戲完成
+[33m94f4c7d[m 遊戲再開
+[33m09c7b00[m gitignore
+[33m7b923ce[m UPdate
+[33m3cfbf2e[m Merge remote-tracking branch 'origin/minesweeper_multiplayer'
+[33m4cf909a[m 解決 TCP 封包合併導致的沾黏問題
+[33m29af21b[m 倒數計時
+[33m9434a04[m 按鈕狀態
+[33me4fecba[m 準備
+[33mf10d746[m 聊天室
+[33mf9b754b[m 網路程式整理
+[33mbddfdc3[m 網路通訊優化
+[33m486d0b3[m event 壞掉
+[33m034d3fb[m 破紀錄
+[33m144af38[m MineSweeper 遊戲同步
+[33m0df40d1[m 網路溝通完成
+[33m4739aa7[m 網路通訊
+[33m95bdebf[m 踩地雷_事件系統_網路連線
+[33mb64b982[m MineSweeper 多人, 雛形
+[33m569e056[m 多個板塊
+[33m3a20cd9[m 加入了一些奇怪的東西
+[33mf5a807f[m 多人連線測試
+[33mfd3b09a[m 檔案層級改動
+[33m61d1626[m 踩地雷單人完成
+[33m6d63d6c[m MineSweeper 整理完畢
+[33m386f599[m 整理程式碼
+[33mb6459af[m Minesweeper 難度
+[33m8d308c6[m Merge pull request #1 from daniel88516/chiuliyou
+[33md435ba1[m[33m ([m[1;31morigin/chiuliyou[m[33m)[m chord click
+[33m2ef5123[m debug mode, 畫面更新
+[33m7691524[m Delete test.png
+[33ma800aa8[m Create test.png
+[33m05ab2b8[m Initial commit

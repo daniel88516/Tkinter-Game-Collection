@@ -4,7 +4,7 @@ import sqlite3
 import os
 
 class RankingPage(tk.Frame):
-    def __init__(self, parent):
+    def __init__(self, parent,):
         super().__init__(parent)
         self.configure(bg="white")
 
@@ -93,10 +93,7 @@ class RankingPage(tk.Frame):
 
         self.canvas.tag_bind("left_arrow", "<Button-1>", lambda e: self.prev_page())
         self.canvas.tag_bind("right_arrow", "<Button-1>", lambda e: self.next_page())
-
-
-
-
+    
     def reset_page(self):
         self.current_page = 0
         self.display_ranking()
