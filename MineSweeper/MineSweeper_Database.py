@@ -1,8 +1,13 @@
-import sqlite3
+import sqlite3, os
 from MineSweeper_Difficulty import DifficultyConfig
+
 class Database:
     def __init__(self, db_name='minesweeper.db'):
-        self.connection = sqlite3.connect(db_name)
+        # 確保資料庫路徑是相對於當前檔案的路徑
+        base_dir = os.path.dirname(os.path.abspath(__file__))
+        db_path = os.path.join(base_dir, db_name)
+
+        self.connection = sqlite3.connect(db_path)
         self.cursor = self.connection.cursor()
         self.create_table()
 

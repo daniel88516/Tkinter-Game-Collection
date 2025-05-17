@@ -435,8 +435,10 @@ if __name__ == "__main__":
             x = (screen_width - w) // 2
             y = (screen_height - h) // 2
             window.geometry(f"{w}x{h}+{x}+{y}")
+            window.state('zoomed')
         else:
             window.geometry('')
+            window.state('normal')
             pass
         
     window = Tk()
