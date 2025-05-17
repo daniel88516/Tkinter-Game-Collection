@@ -18,13 +18,36 @@ class Database:
         ''')
         self.connection.commit()
 
-    def insert_score(self, name, minutes, seconds, millis, config:DifficultyConfig):
-        """插入成績，成績格式為 'mm ss sss'"""
+    def insert_score(self, name, minutes, seconds, millis, config: DifficultyConfig) -> bool:
+        """插入成績，若玩家名稱已存在，覆蓋表現較差的成績"""
         score = f"{minutes:02d} {seconds:02d} {millis:03d}"
+
+        # 檢查是否已存在該玩家的記錄
         self.cursor.execute('''
-            INSERT INTO scores (name, score, difficulty) VALUES (?, ?, ?)
-        ''', (name, score, config.name))
-        self.connection.commit()
+            SELECT id, score FROM scores WHERE name = ? AND difficulty = ?
+        ''', (name, config.name))
+        existing_record = self.cursor.fetchone()
+
+        if existing_record:
+            # 比較新成績與舊成績的優劣
+            existing_id, existing_score = existing_record
+            existing_minutes, existing_seconds, existing_millis = map(int, existing_score.split())
+            if (minutes, seconds, millis) < (existing_minutes, existing_seconds, existing_millis):
+                # 新成績更好，更新記錄
+                self.cursor.execute('''
+                    UPDATE scores SET score = ? WHERE id = ?
+                ''', (score, existing_id))
+                self.connection.commit()
+                return True
+            else:
+                return False
+        else:
+            # 插入新記錄
+            self.cursor.execute('''
+                INSERT INTO scores (name, score, difficulty) VALUES (?, ?, ?)
+            ''', (name, score, config.name))
+            self.connection.commit()
+            return True
 
     def get_total_records(self, difficulty):
         """獲取指定難度的總記錄數"""
@@ -59,3 +82,7 @@ class Database:
     def close(self):
         """關閉資料庫連線"""
         self.connection.close()
+if __name__ == "__main__": 
+    db = Database()
+    db.delete_all_scores()
+    db.close()

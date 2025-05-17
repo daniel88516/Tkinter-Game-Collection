@@ -397,14 +397,28 @@ class MineSweeper(Frame):
 
         def on_confirm():
             name = entry.get().strip()
+            if not name: 
+                messagebox.showerror("錯誤", "名字不能為空！")
+                return
             minutes, seconds, millis = map(int, self.get_timer_value().replace(":", " ").replace(".", " ").split())
             db = Database()
-            db.insert_score(name, minutes, seconds, millis, config)
+            success = db.insert_score(name, minutes, seconds, millis, config)
+            
+            if success:
+                messagebox.showinfo("紀錄結果", f"🎉 {name} 的新紀錄已成功加入排行榜！")
+            else:
+                messagebox.showinfo("紀錄結果", f"😅 {name} 的成績未超過舊有紀錄，未更新。")
+            
             db.close()
             name_popup.destroy()
-
-        confirm_btn = Button(name_popup, text="確定", font=("微軟正黑體", 12), command=on_confirm)
-        confirm_btn.pack(pady=5)
+            
+        button_frame = Frame(name_popup)
+        button_frame.pack(pady=5)
+        confirm_btn = Button(button_frame, text="確定", font=("微軟正黑體", 12), command=on_confirm)
+        confirm_btn.pack(side=LEFT)
+        
+        cancel_btn = Button(button_frame, text="取消", font=("微軟正黑體", 12), command=name_popup.destroy)
+        cancel_btn.pack(padx=10, side=RIGHT)
 
         # 綁定 Enter 鍵
         name_popup.bind("<Return>", lambda event: on_confirm())
