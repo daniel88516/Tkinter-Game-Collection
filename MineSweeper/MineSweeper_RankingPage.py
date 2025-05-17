@@ -43,7 +43,12 @@ class RankingPage(tk.Frame):
             if os.path.exists(path):
                 img = Image.open(path).resize((40, 40), Image.Resampling.LANCZOS)
                 self.score_number_imgs[str(i)] = ImageTk.PhotoImage(img)
-
+        
+        colon_path = os.path.join(base, "Images/分數數字/colon.png")
+        if os.path.exists(colon_path):
+            colon_img = Image.open(colon_path).resize((40, 40), Image.Resampling.LANCZOS)
+            self.score_number_imgs[":"] = ImageTk.PhotoImage(colon_img)
+            
     def create_controls(self):
         rb_style = {
             "font": ("微軟正黑體", 16, "bold"),
@@ -179,12 +184,40 @@ class RankingPage(tk.Frame):
         # 【名字】
         self.canvas.create_text(name_x, y_pos + 20, text=name, font=("微軟正黑體", 16, "bold"), anchor="n")
 
-        # 【分數】用數字拼接顯示
-        score_str = str(score)
-        total_score_width = len(score_str) * num_width + (len(score_str) - 1) * spacing
+        # 【分數】用數字和冒號拼接顯示
+        score_str = score.split()  # 假設格式為 'mm ss sss'
+        minutes, seconds, millis = score_str[0], score_str[1], score_str[2]
+        total_score_width = (len(minutes) + len(seconds) + len(millis)) * num_width + 2 * num_width + (len(minutes) + len(seconds) + len(millis) - 1) * spacing
         start_score_x = score_x - total_score_width // 2
 
-        for char in score_str:
+        # 顯示分鐘
+        for char in minutes:
+            if char in self.score_number_imgs:
+                img = self.score_number_imgs[char]
+                self.canvas.create_image(start_score_x, y_pos + 10, image=img, anchor="nw")
+                start_score_x += num_width + spacing
+
+        # 顯示冒號
+        if ":" in self.score_number_imgs:
+            colon_img = self.score_number_imgs[":"]
+            self.canvas.create_image(start_score_x, y_pos + 10, image=colon_img, anchor="nw")
+            start_score_x += num_width + spacing
+
+        # 顯示秒數
+        for char in seconds:
+            if char in self.score_number_imgs:
+                img = self.score_number_imgs[char]
+                self.canvas.create_image(start_score_x, y_pos + 10, image=img, anchor="nw")
+                start_score_x += num_width + spacing
+
+        # 顯示冒號
+        if ":" in self.score_number_imgs:
+            colon_img = self.score_number_imgs[":"]
+            self.canvas.create_image(start_score_x, y_pos + 10, image=colon_img, anchor="nw")
+            start_score_x += num_width + spacing
+
+        # 顯示毫秒
+        for char in millis:
             if char in self.score_number_imgs:
                 img = self.score_number_imgs[char]
                 self.canvas.create_image(start_score_x, y_pos + 10, image=img, anchor="nw")
