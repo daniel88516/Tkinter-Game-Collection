@@ -1,5 +1,5 @@
 import sqlite3, os
-from MineSweeper_Difficulty import DifficultyConfig
+from MineSweeper_Difficulty import DifficultyConfig, Difficulty
 
 class Database:
     def __init__(self, db_name='minesweeper.db'):
@@ -89,5 +89,4 @@ class Database:
         self.connection.close()
 if __name__ == "__main__": 
     db = Database()
-    db.delete_all_scores()
     db.close()

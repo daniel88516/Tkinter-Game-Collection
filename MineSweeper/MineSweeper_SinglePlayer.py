@@ -196,7 +196,7 @@ class MineSweeper(Frame):
         self.is_game_over = False
         self.first_click = True
         self.countup_timer.reset()
-        self.safe_reveal_btn.config(state=DISABLED)
+        self.safe_reveal_btn.config(image=self.tile_images["LightOn"],state=DISABLED)
         self.safe_reveal_var = True
         self.gameBoard.reset()
         self.update_board()
