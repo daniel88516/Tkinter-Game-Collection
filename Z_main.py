@@ -39,6 +39,7 @@ class ZMain(Frame):
         
         self.notebook.bind("<<NotebookTabChanged>>", self.on_tab_changed)
 
+
         
     def on_tab_changed(self, event):
         current_tab = event.widget.select()

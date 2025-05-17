@@ -133,7 +133,8 @@ class CanvasZombie(tk.Frame):
 
 
     def quit_game(self):
-        self.master.destroy()
+        # 往上找到 root 視窗並正確關閉
+        self.winfo_toplevel().destroy()
 
     def load_images(self):
         base = os.path.dirname(__file__)
