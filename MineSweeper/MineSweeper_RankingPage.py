@@ -1,35 +1,37 @@
 import tkinter as tk
 from PIL import Image, ImageTk
-import sqlite3
 import os
-
+from MineSweeper_Difficulty import Difficulty, DifficultyConfig
+from MineSweeper_Database import Database
 class RankingPage(tk.Frame):
+    """初始化"""
     def __init__(self, parent,):
-        super().__init__(parent)
-        self.configure(bg="white")
+            super().__init__(parent)
+            self.configure(bg="white")
+            self.db = Database()
+            
+            self.canvas = tk.Canvas(self, bg="white", highlightthickness=0)
+            self.canvas.pack(side="left", fill="both", expand=True)
 
-        self.canvas = tk.Canvas(self, bg="white", highlightthickness=0)
-        self.canvas.pack(side="left", fill="both", expand=True)
+            self.scrollbar = tk.Scrollbar(self, orient="vertical", command=self.canvas.yview)
+            self.scrollbar.pack(side="right", fill="y")
+            self.canvas.configure(yscrollcommand=self.scrollbar.set)
 
-        self.scrollbar = tk.Scrollbar(self, orient="vertical", command=self.canvas.yview)
-        self.scrollbar.pack(side="right", fill="y")
-        self.canvas.configure(yscrollcommand=self.scrollbar.set)
+            # 將 selected_difficulty 的值改為文字型別
+            self.selected_difficulty = tk.StringVar(value="簡單")
+            self.current_page = 0
 
-        self.selected_time = tk.IntVar(value=30)
-        self.current_page = 0
+            self.load_images()
 
-        self.load_images()
-        self.setup_db()
+            self.create_controls()
+            self.display_ranking()
 
-        self.create_controls()
-        self.display_ranking()
-
-        self.canvas.bind("<Configure>", self.on_frame_configure)
+            self.canvas.bind("<Configure>", self.on_frame_configure)
 
     def load_images(self):
         base = os.path.dirname(__file__)
 
-        bg_path = os.path.join(base, "Zombie圖片/排行榜背景.png")
+        bg_path = os.path.join(base, "Images/排行榜背景.png")
         if os.path.exists(bg_path):
             self.bg_img = Image.open(bg_path)
         else:
@@ -37,16 +39,16 @@ class RankingPage(tk.Frame):
 
         self.score_number_imgs = {}
         for i in range(10):
-            path = os.path.join(base, f"Zombie圖片/分數數字/{i}.png")
+            path = os.path.join(base, f"Images/分數數字/{i}.png")
             if os.path.exists(path):
                 img = Image.open(path).resize((40, 40), Image.Resampling.LANCZOS)
                 self.score_number_imgs[str(i)] = ImageTk.PhotoImage(img)
-
-    def setup_db(self):
-        db_path = os.path.join(os.path.dirname(__file__), "zombie_rand.db")
-        self.conn = sqlite3.connect(db_path)
-        self.cursor = self.conn.cursor()
-
+        
+        colon_path = os.path.join(base, "Images/分數數字/colon.png")
+        if os.path.exists(colon_path):
+            colon_img = Image.open(colon_path).resize((40, 40), Image.Resampling.LANCZOS)
+            self.score_number_imgs[":"] = ImageTk.PhotoImage(colon_img)
+            
     def create_controls(self):
         rb_style = {
             "font": ("微軟正黑體", 16, "bold"),
@@ -58,20 +60,28 @@ class RankingPage(tk.Frame):
             "selectcolor": "#000000"
         }
 
-        current_time = self.selected_time.get()
-        rb_30_fg = "#FF00FF" if current_time == 30 else "#666666"
-        rb_60_fg = "#FF00FF" if current_time == 60 else "#666666"
+        base_x = 700  # 起始 X 座標
+        x_offset = 100  # 每個按鈕之間的水平間距
+        y_position = 50  # Y 座標
+        for idx, difficulty in enumerate(Difficulty):
+            config = DifficultyConfig(difficulty)
+            current_selection = self.selected_difficulty.get()
+            fg_color = "#FF00FF" if current_selection == config.name else "#666666"
 
-        rb_30 = tk.Radiobutton(self.canvas, text="30 秒", variable=self.selected_time, value=30,
-                            command=self.reset_page, fg=rb_30_fg, **rb_style)
-        self.canvas.create_window(700, 50, window=rb_30, anchor="nw")
+            radio_btn = tk.Radiobutton(
+                self.canvas,
+                text=config.name,
+                variable=self.selected_difficulty,
+                value=config.name,
+                command=self.reset_page,
+                fg=fg_color,
+                **rb_style
+            )
+            self.canvas.create_window(base_x + idx * x_offset, y_position, window=radio_btn, anchor="nw")
 
-        rb_60 = tk.Radiobutton(self.canvas, text="60 秒", variable=self.selected_time, value=60,
-                            command=self.reset_page, fg=rb_60_fg, **rb_style)
-        self.canvas.create_window(800, 50, window=rb_60, anchor="nw")
 
         base = os.path.dirname(__file__)
-        arrow_path = os.path.join(base, "Zombie圖片/箭頭.png")
+        arrow_path = os.path.join(base, "Images/箭頭.png")
 
         left_img = Image.open(arrow_path).resize((180, 180), Image.Resampling.LANCZOS)
         right_img = left_img.transpose(Image.FLIP_LEFT_RIGHT)
@@ -94,22 +104,19 @@ class RankingPage(tk.Frame):
         self.canvas.tag_bind("left_arrow", "<Button-1>", lambda e: self.prev_page())
         self.canvas.tag_bind("right_arrow", "<Button-1>", lambda e: self.next_page())
     
+    """頁面更新"""
     def reset_page(self):
         self.current_page = 0
         self.display_ranking()
 
     def next_page(self):
         per_page = 10
-        self.cursor.execute(
-            "SELECT COUNT(*) FROM scores WHERE time = ?",
-            (self.selected_time.get(),)
-        )
-        total_records = self.cursor.fetchone()[0]
+        total_records = self.db.get_total_records(self.selected_difficulty.get())
         max_page = max((total_records - 1) // per_page, 0)
 
         if self.current_page < max_page:
             self.current_page += 1
-            self.display_ranking()  # 只有真的換頁才刷新
+            self.display_ranking()
 
     def prev_page(self):
         if self.current_page > 0:
@@ -125,6 +132,7 @@ class RankingPage(tk.Frame):
             self.canvas.configure(scrollregion=(0, 0, content_bbox[2], max(content_bbox[3], canvas_height)))
         self.display_ranking()
 
+    """輔助函數"""
     def display_ranking(self):
         self.canvas.delete("all")
 
@@ -137,11 +145,9 @@ class RankingPage(tk.Frame):
 
         self.create_controls()
 
-        self.cursor.execute(
-            "SELECT name, score FROM scores WHERE time = ? ORDER BY score DESC LIMIT 100",
-            (self.selected_time.get(),)
-        )
-        results = self.cursor.fetchall()
+        per_page = 10
+        start_idx = self.current_page * per_page
+        page_data = self.db.get_scores_by_page(self.selected_difficulty.get(), start_idx, per_page)
 
         per_page = 10
         start_idx = self.current_page * per_page
@@ -151,7 +157,6 @@ class RankingPage(tk.Frame):
         row_height = 50
         canvas_width = self.canvas.winfo_width()
 
-        page_data = results[start_idx:end_idx]
         for idx, (name, score) in enumerate(page_data, start=start_idx + 1):
             self.draw_ranking_row(idx, name, score, y_offset, canvas_width)
             y_offset += row_height
@@ -179,17 +184,50 @@ class RankingPage(tk.Frame):
         # 【名字】
         self.canvas.create_text(name_x, y_pos + 20, text=name, font=("微軟正黑體", 16, "bold"), anchor="n")
 
-        # 【分數】用數字拼接顯示
-        score_str = str(score)
-        total_score_width = len(score_str) * num_width + (len(score_str) - 1) * spacing
+        # 【分數】用數字和冒號拼接顯示
+        score_str = score.split()  # 假設格式為 'mm ss sss'
+        minutes, seconds, millis = score_str[0], score_str[1], score_str[2]
+        total_score_width = (len(minutes) + len(seconds) + len(millis)) * num_width + 2 * num_width + (len(minutes) + len(seconds) + len(millis) - 1) * spacing
         start_score_x = score_x - total_score_width // 2
 
-        for char in score_str:
+        # 顯示分鐘
+        for char in minutes:
             if char in self.score_number_imgs:
                 img = self.score_number_imgs[char]
                 self.canvas.create_image(start_score_x, y_pos + 10, image=img, anchor="nw")
                 start_score_x += num_width + spacing
 
+        # 顯示冒號
+        if ":" in self.score_number_imgs:
+            colon_img = self.score_number_imgs[":"]
+            self.canvas.create_image(start_score_x, y_pos + 10, image=colon_img, anchor="nw")
+            start_score_x += num_width + spacing
+
+        # 顯示秒數
+        for char in seconds:
+            if char in self.score_number_imgs:
+                img = self.score_number_imgs[char]
+                self.canvas.create_image(start_score_x, y_pos + 10, image=img, anchor="nw")
+                start_score_x += num_width + spacing
+
+        # 顯示冒號
+        if ":" in self.score_number_imgs:
+            colon_img = self.score_number_imgs[":"]
+            self.canvas.create_image(start_score_x, y_pos + 10, image=colon_img, anchor="nw")
+            start_score_x += num_width + spacing
+
+        # 顯示毫秒
+        for char in millis:
+            if char in self.score_number_imgs:
+                img = self.score_number_imgs[char]
+                self.canvas.create_image(start_score_x, y_pos + 10, image=img, anchor="nw")
+                start_score_x += num_width + spacing
+
+    def destroy(self):
+        self.db.close()
+        super().destroy()
+        
+        
 if __name__ == "__main__":
     root = tk.Tk()
     root.state("zoomed")

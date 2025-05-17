@@ -1,25 +1,35 @@
 from tkinter import *
 from tkinter import messagebox
-import os
-from MineSweeper_SinglePlayer_Difficulty import DifficultyConfig, Difficulty
-from MineSweeper_SinglePlayer_GameBoard import GameBoard
-class MineSweeper:
+from tkinter.ttk import Notebook
+from PIL import Image, ImageTk
+import os, random
+from functools import wraps
+from MineSweeper_Difficulty import DifficultyConfig, Difficulty
+from MineSweeper_GameBoard import GameBoard
+from MineSweeper_Timer import HighPrecisionCountUpTimer
+from MineSweeper_RankingPage import RankingPage
+from MineSweeper_Database import Database
+
+def operation_check(method):
+    @wraps(method)
+    def wrapper(self, *args, **kwargs):
+        if getattr(self, "is_game_over", True):
+            return
+        return method(self, *args, **kwargs)
+    return wrapper
+class MineSweeper(Frame):
     """初始化"""
-    def __init__(self, window:Tk, difficulty: Difficulty=Difficulty.NORMAL):
+    def __init__(self, parent:Tk, difficulty: Difficulty=Difficulty.NORMAL):
+        super().__init__(parent)
         # 根據難度初始化遊戲場地
-        self.config = DifficultyConfig(difficulty)
-        self.gameBoard:GameBoard = GameBoard(
-            self.config.board_width,
-            self.config.board_height,
-            self.config.mine_count
-        )
+        self.gameBoard:GameBoard = GameBoard(DifficultyConfig(difficulty))
         self.buttons: list[list[Button]] = []
                     
-        self.window:Tk = window
+        self.window:Tk = parent
         
         self.create_variable()
         self.load_images()
-        self.create_widget()
+        self.create_gameboard()
         self.center_window()
         self.new_game()
     
@@ -29,7 +39,7 @@ class MineSweeper:
         
     def load_images(self):
         """把圖片加載進來, 之後可透過環境變數簡化"""
-        base_path = os.path.join(os.path.dirname(__file__), f"Images/MineSweeper")
+        base_path = os.path.join(os.path.dirname(__file__), f"Images/UI/32x32")
         self.tile_images = {}
         for i in range(1, 9):
             self.tile_images[f"Tile{i}"] = PhotoImage(file=os.path.join(base_path, f"Tile{i}.png"))
@@ -38,7 +48,9 @@ class MineSweeper:
         self.tile_images["TileFlag"]     = PhotoImage(file=os.path.join(base_path, "TileFlag.png"))
         self.tile_images["TileUnknown"]  = PhotoImage(file=os.path.join(base_path, "TileUnknown.png"))
         self.tile_images["TileMine"]     = PhotoImage(file=os.path.join(base_path, "TileMine.png"))
-
+        self.tile_images["LightOn"]      = PhotoImage(file=os.path.join(base_path, "LightOn.png"))
+        self.tile_images["LightOff"]     = PhotoImage(file=os.path.join(base_path, "LightOff.png"))
+        
     def create_variable(self):
         """會用到的一些遊戲變數"""
         self.flagged_count:IntVar = IntVar(value=0)
@@ -46,11 +58,40 @@ class MineSweeper:
         self.first_click:bool = True
         self.chord_holding:bool = False
         self.debug_mode:bool = False
+        self.safe_reveal_var:bool = True
         
-    def create_widget(self):
-        """創建你會看到的所有元素"""
-        self.frame = Frame(self.window)
+        self.final_message: list[str] = [
+            "你試圖在地雷中優雅地跳芭蕾", 
+            "你被逐出了人界",
+            "你想證明地雷很安全，失敗得很徹底",
+            "你被地雷排除了",
+            "你被炸得血肉模糊",
+            "你忘了金屬探測器怎麼用", 
+            "你被絆倒了",
+            "你發出了一聲巨響，隨後消散在天地間",
+            "你的四肢在空中飛舞，劃出一道優美的血線",
+            "轟!"
+        ]
+                
+    def create_gameboard(self):
+        """創建遊戲版相關的所有元件"""
+        self.frame = Frame(self)
         self.frame.pack(padx=20, pady=20)
+        
+        self.info_frame = Frame(self.frame)
+        self.info_frame.pack(pady=5, fill=X)
+        
+        self.countup_timer = HighPrecisionCountUpTimer(self.frame)
+        self.timer_label = Label(self.info_frame, textvariable=self.countup_timer.countdown_var, font=("Arial", 12))
+        self.timer_label.pack(side=LEFT, anchor=W)
+        
+        self.safe_reveal_var = True
+        self.safe_reveal_btn = Button(self.info_frame,
+                                      image = self.tile_images["LightOn"],
+                                      relief=FLAT,
+                                      command=self.on_toggle_safe_reveal_var)
+        self.safe_reveal_btn.pack(side=RIGHT, anchor=E)
+        
         self.board_frame = Frame(self.frame)
         self.board_frame.pack()
         for r in range(self.gameBoard.height):
@@ -89,11 +130,14 @@ class MineSweeper:
                 command=lambda d=diff: self.change_difficulty(d)
             ).pack(side=LEFT, padx=5)
         
+        # 按下 r, reset 
+        self.window.bind("<space>", lambda event: self.new_game())
+        self.window.bind("<Return>", lambda event:  self.new_game())
         self.reset_button = Button(control_frame, text="重置遊戲", command=self.new_game)
         self.reset_button.pack()
         
-        # self.debug_button = Button(control_frame, text="Debug 模式：關閉", command=self.toggle_debug_mode)
-        # self.debug_button.pack(side=LEFT, padx=5)
+        self.debug_button = Button(control_frame, text="Debug 模式：關閉", command=self.toggle_debug_mode)
+        self.debug_button.pack(side=LEFT, padx=5)
 
     def center_window(self):
         """讓視窗自適應大小, 然後置中"""
@@ -115,6 +159,17 @@ class MineSweeper:
         self.debug_button.config(text=f"Debug 模式：{'開啟' if self.debug_mode else '關閉'}")
         self.update_board()
         
+    """計時器相關函數"""
+    def start_timer(self):
+        self.countup_timer.reset()
+        self.countup_timer.start_countup()
+
+    def stop_timer(self):
+        self.countup_timer.stop_countup()
+
+    def get_timer_value(self) -> str:
+        return self.countup_timer.countdown_var.get()
+    
     """遊戲邏輯"""
     def flood_fill(self, r, c):
         if not self.gameBoard.is_valid_position(r, c):
@@ -140,13 +195,18 @@ class MineSweeper:
         """開始一場新遊戲"""
         self.is_game_over = False
         self.first_click = True
+        self.countup_timer.reset()
+        self.safe_reveal_btn.config(state=DISABLED)
+        self.safe_reveal_var = True
         self.gameBoard.reset()
         self.update_board()
         
     def game_over(self):
         """你爆炸了"""
         self.reveal_all_mines()
-        messagebox.showinfo("遊戲結束", "你踩到地雷了！")
+        self.is_game_over = True
+        self.stop_timer()
+        messagebox.showerror("遊戲結束", f"{self.get_random_final_message()}, 成功在{self.get_timer_value()}內失敗了!")
         
     def check_win_condition(self):
         """勝利唾手可得"""
@@ -156,32 +216,39 @@ class MineSweeper:
                 if not cell.is_mine() and not cell.revealed:
                     return
         self.is_game_over = True
-        messagebox.showinfo("恭喜", "你贏了！")
-    
+        self.stop_timer()
+        self.show_victory_popup()
+        # messagebox.showinfo("恭喜", f"你在{self.get_timer_value()}內贏得了遊戲！")
+        
     """滑鼠事件處理"""
+    @operation_check
     def on_left_click(self, r, c):
         """你按下了左鍵"""
-        if self.is_game_over:
-            return
-        
         # 第一次按下的時候, 才擺放地雷
         if self.first_click:
-            self.first_click = False
-            self.gameBoard.place_mines(r, c)
+            self.safe_reveal_btn.config(state=ACTIVE)
+            self.gameBoard.place_mines(r, c, int.from_bytes(os.urandom(4), byteorder='big'))
             self.gameBoard.calculate_numbers()
+            self.start_timer()
             self.first_click = False
 
         # 旗標不會被展開
         cell = self.gameBoard.get_cell(r, c)
-        if not cell.revealed and cell.flagged:
+        if cell.revealed or cell.flagged:
             return
 
         # 每次按下, 判斷是否為地雷
         if cell.is_mine():
-            cell.exploded = True
-            cell.revealed = True
-            self.is_game_over = True
-            self.game_over()
+            if self.safe_reveal_var == True:
+                cell.flagged = True
+                cell.revealed = True  
+                self.safe_reveal_var = False               
+                self.safe_reveal_btn.config(image=self.tile_images["LightOff"], state=DISABLED)
+            else: 
+                cell.exploded = True
+                cell.revealed = True
+                self.is_game_over = True
+                self.game_over()
         elif cell.is_number():
             cell.revealed = True
         elif cell.is_empty():
@@ -189,12 +256,9 @@ class MineSweeper:
         self.update_board()
         self.check_win_condition()
 
+    @operation_check
     def on_right_click(self, r, c):
         """你按下了右鍵插旗子"""
-        # 遊戲已經結束, 你來太晚了
-        if self.is_game_over:
-            return
-        
         # 你不能將旗子插在奇怪的位置
         cell = self.gameBoard.get_cell(r, c)
         if cell.revealed:
@@ -207,11 +271,9 @@ class MineSweeper:
         cell.flagged = not cell.flagged
         self.update_board()
 
+    @operation_check
     def on_chord_click(self, r, c):
-        """你想要抄近路，玩的快一些"""
-        if self.is_game_over:
-            return
-        
+        """你想要抄近路，玩的快一些"""        
         # 只能在 revealed, 且為數字的時候觸發
         cell = self.gameBoard.get_cell(r, c)
         if not cell.revealed or not cell.is_number():
@@ -221,7 +283,6 @@ class MineSweeper:
         if flag_count != cell.number:
             return
         
-        exploded = False
         for dr in [-1, 0, 1]:
             for dc in [-1, 0, 1]:
                 if dr == 0 and dc == 0:
@@ -229,26 +290,11 @@ class MineSweeper:
                 nr = r + dr
                 nc = c + dc
                 if self.gameBoard.is_valid_position(nr, nc):
-                    neighbor = self.gameBoard.get_cell(nr, nc)
-                    if not neighbor.flagged and not neighbor.revealed:
-                        if neighbor.is_mine():
-                            neighbor.exploded = True
-                            neighbor.revealed = True
-                            exploded = True
-                        elif neighbor.is_number():
-                            neighbor.revealed = True
-                        else: # empty
-                            self.flood_fill(nr, nc)
-        if exploded:
-            self.is_game_over = True
-            self.game_over()
-            
-        self.update_board()
+                    self.on_left_click(nr, nc)
     
+    @operation_check
     def on_chord_press(self, r, c):
         """想要展開時的「預視」效果"""
-        if self.is_game_over:
-            return
         
         cell = self.gameBoard.get_cell(r, c)
         if not cell.revealed or not cell.is_number():
@@ -279,7 +325,11 @@ class MineSweeper:
         self.chord_holding = False
         self.update_board()
         self.on_chord_click(r, c)
-        
+    
+    def on_toggle_safe_reveal_var(self):
+        self.safe_reveal_var = not self.safe_reveal_var
+        self.safe_reveal_btn.config(image=self.tile_images["LightOn"] if self.safe_reveal_var == True else self.tile_images["LightOff"])
+    
     """輔助方法"""
     def reveal_all_mines(self):
         for r in range(self.gameBoard.height):
@@ -317,21 +367,92 @@ class MineSweeper:
 
     def change_difficulty(self, difficulty: Difficulty):
         """切換難度"""
-        self.config = DifficultyConfig(difficulty)
-        self.gameBoard = GameBoard(
-            self.config.board_width,
-            self.config.board_height,
-            self.config.mine_count
-        )
+        self.gameBoard = GameBoard(DifficultyConfig(difficulty))
         self.buttons:list[list[Button]] = []
         self.frame.destroy()
-        self.create_widget()
+        self.create_gameboard()
         self.center_window()
         self.new_game()
+    
+    def get_random_final_message(self) -> str:
+        """隨機選擇一個訊息"""
+        return random.choice(self.final_message)
+       
+    def show_victory_popup(self):
+        config = self.gameBoard.config
         
-# main
+        messagebox.showinfo("恭喜", f"你在 {self.get_timer_value()} 內贏得了遊戲！")
+        # 建立輸入名字的 Toplevel 視窗
+        name_popup = Toplevel()
+        name_popup.title("輸入名字")
+        name_popup.geometry("300x150")
+        name_popup.resizable(False, False)
+        name_popup.grab_set()
+
+        Label(name_popup, text="請輸入你的名字：", font=("微軟正黑體", 14)).pack(pady=10)
+
+        entry = Entry(name_popup, font=("微軟正黑體", 14))
+        entry.pack(pady=5)
+        entry.focus()
+
+        def on_confirm():
+            name = entry.get().strip()
+            if not name: 
+                messagebox.showerror("錯誤", "名字不能為空！")
+                return
+            minutes, seconds, millis = map(int, self.get_timer_value().replace(":", " ").replace(".", " ").split())
+            db = Database()
+            success = db.insert_score(name, minutes, seconds, millis, config)
+            
+            if success:
+                messagebox.showinfo("紀錄結果", f"🎉 {name} 的新紀錄已成功加入排行榜！")
+            else:
+                messagebox.showinfo("紀錄結果", f"😅 {name} 的成績未超過舊有紀錄，未更新。")
+            
+            db.close()
+            name_popup.destroy()
+            
+        button_frame = Frame(name_popup)
+        button_frame.pack(pady=5)
+        confirm_btn = Button(button_frame, text="確定", font=("微軟正黑體", 12), command=on_confirm)
+        confirm_btn.pack(side=LEFT)
+        
+        cancel_btn = Button(button_frame, text="取消", font=("微軟正黑體", 12), command=name_popup.destroy)
+        cancel_btn.pack(padx=10, side=RIGHT)
+
+        # 綁定 Enter 鍵
+        name_popup.bind("<Return>", lambda event: on_confirm())
+
 if __name__ == "__main__":
+    def on_tab_change(event):
+        """處理 Notebook 分頁切換事件"""
+        selected_tab = event.widget.select()
+        selected_tab_text = event.widget.tab(selected_tab, "text")
+        if selected_tab_text == "排行榜":
+            screen_width = window.winfo_screenwidth()
+            screen_height = window.winfo_screenheight()
+            w, h = 1920, 1080
+            x = (screen_width - w) // 2
+            y = (screen_height - h) // 2
+            window.geometry(f"{w}x{h}+{x}+{y}")
+        else:
+            window.geometry('')
+            pass
+        
     window = Tk()
     window.title("踩地雷")
-    game = MineSweeper(window)
-    game.start()
+
+    notebook = Notebook(window)
+    notebook.pack(expand=True, fill=BOTH)
+
+    minesweeper_game = MineSweeper(window)
+    window.wm_iconphoto(False, minesweeper_game.tile_images["TileMine"])
+    notebook.add(minesweeper_game, text="遊戲頁面")
+
+    rank_page = RankingPage(window)
+    notebook.add(rank_page, text="排行榜")
+
+    # 綁定分頁切換事件
+    notebook.bind("<<NotebookTabChanged>>", on_tab_change)
+
+    minesweeper_game.start()

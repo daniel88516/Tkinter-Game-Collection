@@ -72,16 +72,19 @@ class BoardManager:
         # 顯示計時 Label
         self.info_frame = Frame(self.board_frame)
         self.info_frame.pack(fill=X,pady=(0,5))
-        
+                        
         self.timer_label = Label(self.info_frame, textvariable=self.countup_timer.countdown_var, font=(None, 12))
         self.timer_label.pack(side=LEFT, anchor=W)
-        
+                
         # 技能施放按鈕區塊
         self.skill_frame = Frame(self.info_frame)
         self.skill_frame.pack(side=RIGHT, anchor=E)
         
-        self.safe_reveal_button = Button(self.skill_frame, text="安全展開", command=self.on_toggle_safe_reveal_var)
-        self.safe_reveal_button.pack()
+        self.safe_reveal_btn = Button(self.skill_frame, 
+                                         image=self.tile_images["LightOn"],
+                                         relief=FLAT,
+                                         command=self.on_toggle_safe_reveal_var)
+        self.safe_reveal_btn.pack()
  
         # 遊戲板按鈕
         self.buttons_frame = Frame(self.board_frame)
@@ -90,57 +93,20 @@ class BoardManager:
         
         # change_difficulty 會呼叫 reset
         self.change_difficulty(DifficultyConfig(Difficulty.EASY))
-        
-
+    
+    """計時器相關函數"""  
     def start_timer(self):
         self.is_game_started = True
         self.countup_timer.reset()
-        self.countup_timer.start_countdown()
+        self.countup_timer.start_countup()
 
     def stop_timer(self):
-        self.countup_timer.stop_countdown()
+        self.countup_timer.stop_countup()
 
     def get_timer_value(self):
         return self.countup_timer.countdown_var.get()
-
-    def reset(self, remember_ready_state:bool=False):
-        """重置遊戲板"""
-        if not remember_ready_state: 
-            self.is_ready = False
-        self.is_game_started = False
-        self.is_game_over = False
-        self.first_click = True
-        self.safe_reveal_var = False
-        
-        self.safe_reveal_button.config(text="安全展開")
-        self.safe_reveal_button.config(state=DISABLED)
-        
-        self.gameBoard.reset()
-        self.countup_timer.reset()
-        self.update_board()
-        # 重置計時器顯示
-        self.countup_timer.reset()
     
-    def flood_fill(self, r, c):
-        """塌陷"""
-        if not self.gameBoard.is_valid_position(r, c):
-            return 
-        cell = self.gameBoard.get_cell(r, c)
-        if cell.revealed or cell.flagged:
-            return
-        cell.revealed = True
-        if cell.is_empty():
-            for dr in [-1, 0, 1]:
-                for dc in [-1, 0, 1]:
-                    if dr == 0 and dc == 0:
-                        continue
-                    nr = r + dr
-                    nc = c + dc
-                    if self.gameBoard.is_valid_position(nr, nc):
-                        neighbor = self.gameBoard.get_cell(nr, nc)
-                        if not neighbor.revealed and not neighbor.is_mine():
-                            self.flood_fill(nr, nc)
-    
+    """玩家操作"""    
     @operation_check
     def on_reveal(self, r:int, c:int, seed=None):
         """你按下了左鍵"""
@@ -156,7 +122,7 @@ class BoardManager:
         # 第一次按下的時候, 才擺放地雷
         if self.first_click:
             if self.is_opponent == False:
-                self.safe_reveal_button.config(state=ACTIVE)
+                self.safe_reveal_btn.config(state=ACTIVE)
             self.first_click = False
             self.event_first_reveal_cell.emit(r, c, seed)
             self.gameBoard.place_mines(r, c, seed)
@@ -169,8 +135,8 @@ class BoardManager:
                 cell.flagged = True
                 cell.revealed = True 
                 self.safe_reveal_var = False
-                self.safe_reveal_button.config(text="安全展開")
-                self.safe_reveal_button.config(state=DISABLED)
+                self.safe_reveal_btn.config(image=self.tile_images["LightOff"])
+                self.safe_reveal_btn.config(state=DISABLED)
             else: 
                 cell.exploded = True
                 cell.revealed = True
@@ -186,7 +152,7 @@ class BoardManager:
     def on_toggle_safe_reveal_var(self):
         self.event_toggle_safe_reveal_var.emit()
         self.safe_reveal_var = not self.safe_reveal_var
-        self.safe_reveal_button.config(foreground="green" if self.safe_reveal_var == True else "red")
+        self.safe_reveal_btn.config(image=self.tile_images["LightOn"] if self.safe_reveal_var == True else self.tile_images["LightOff"])
         
     def on_toggle_flag(self, r:int, c:int):
         """你按下了右鍵插旗子"""        
@@ -213,7 +179,6 @@ class BoardManager:
             return
         
         self.event_chord_click_cell.emit(r, c)
-        exploded = False
         for dr in [-1, 0, 1]:
             for dc in [-1, 0, 1]:
                 if dr == 0 and dc == 0:
@@ -257,7 +222,28 @@ class BoardManager:
         self.chord_holding = False
         self.update_board()
         self.on_chord_click(r, c)
-        
+    
+    """輔助函數"""  
+    def flood_fill(self, r, c):
+        """塌陷"""
+        if not self.gameBoard.is_valid_position(r, c):
+            return 
+        cell = self.gameBoard.get_cell(r, c)
+        if cell.revealed or cell.flagged:
+            return
+        cell.revealed = True
+        if cell.is_empty():
+            for dr in [-1, 0, 1]:
+                for dc in [-1, 0, 1]:
+                    if dr == 0 and dc == 0:
+                        continue
+                    nr = r + dr
+                    nc = c + dc
+                    if self.gameBoard.is_valid_position(nr, nc):
+                        neighbor = self.gameBoard.get_cell(nr, nc)
+                        if not neighbor.revealed and not neighbor.is_mine():
+                            self.flood_fill(nr, nc)
+                              
     def check_win_condition(self):
         """勝利唾手可得"""
         for r in range(self.gameBoard.height):
@@ -303,6 +289,27 @@ class BoardManager:
                         img = self.tile_images["TileUnknown"]
                 btn.config(image=img)
 
+        """遊戲狀態相關函數"""
+    
+    """遊戲狀態相關函數"""
+    def reset(self, remember_ready_state:bool=False):
+        """重置遊戲板"""
+        if not remember_ready_state: 
+            self.is_ready = False
+        self.is_game_started = False
+        self.is_game_over = False
+        self.first_click = True
+        self.safe_reveal_var = True
+        
+        self.safe_reveal_btn.config(image=self.tile_images["LightOn"])
+        self.safe_reveal_btn.config(state=DISABLED)
+        
+        self.gameBoard.reset()
+        self.countup_timer.reset()
+        self.update_board()
+        # 重置計時器顯示
+        self.countup_timer.reset()
+        
     def game_over(self):
         """你爆炸了"""
         self.is_game_over = True

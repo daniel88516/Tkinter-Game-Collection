@@ -26,7 +26,7 @@ class ChatManager:
         self.final_message: list[str] = [
             "試圖在地雷中優雅地跳芭蕾", 
             "被逐出了人界",
-            "想證明地雷很安全，他失敗了",
+            "想證明地雷很安全，失敗得很徹底",
             "被地雷排除了",
             "被炸得血肉模糊",
             "忘了金屬探測器怎麼用", 
@@ -146,10 +146,10 @@ class ChatManager:
         # 新增圖片按鈕區域
         image_button_frame = Frame(chat_input_frame)
         image_button_frame.pack(
-            side="bottom",
-            fill="x",
+            side=BOTTOM,
+            fill=X,
             padx=5,
-            pady=5
+            pady=5,
         )
 
         # 載入圖片並新增按鈕

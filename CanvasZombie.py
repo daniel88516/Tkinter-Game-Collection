@@ -504,8 +504,6 @@ class CanvasZombie(tk.Frame):
             self.canvas.itemconfig(self.raiden_text_id, text=random.choice(self.raiden_quotes))
             self.can_shoot = False
             self.after(1000, self.reset_penalty_and_clear)
-
-
             
     def animate_rows_fall(self, callback=None, duration=500):
         fps = 120

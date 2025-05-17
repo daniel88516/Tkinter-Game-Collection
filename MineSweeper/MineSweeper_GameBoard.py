@@ -4,6 +4,7 @@ from MineSweeper_Difficulty import DifficultyConfig
 class GameBoard:
     """遊戲初始化"""
     def __init__(self, config:DifficultyConfig, name:str="我沒有名字...嗚嗚嗚"):
+        self.config = config
         self.width:int = config.board_width
         self.height:int = config.board_height
         self.mine_count:int = config.mine_count

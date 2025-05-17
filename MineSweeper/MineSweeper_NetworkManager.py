@@ -1,4 +1,4 @@
-import socket, threading, json, queue
+import socket, threading, json, queue, time
 from MineSweeper_Event import MyEvent
 from MineSweeper_GameMessage import GameMessage, GameMessageType
 from tkinter import * 
@@ -10,6 +10,9 @@ class NetworkManager:
         
         self.send_queue = queue.Queue()
         self.recv_queue = queue.Queue()
+        
+        self.sent_messages = [] # 記錄所有傳送過的訊息 (message, interval)
+        self.last_message_time = None
         
         threading.Thread(target=self._send_loop, daemon=True).start()
         
@@ -64,7 +67,7 @@ class NetworkManager:
 
         # 客戶端區塊
         client_frame = LabelFrame(self.network_frame, text="客戶端設定")
-        client_frame.pack(pady=10, fill="x", side=BOTTOM)
+        client_frame.pack(pady=10, fill="x")
 
         Label(client_frame, text="目標IP:").grid(row=0, column=0)
         self.client_ip_entry = Entry(client_frame, textvariable=self.client_ip_var)
@@ -86,7 +89,22 @@ class NetworkManager:
             text="[連線狀態] 未連接"
         )
         self.client_status.grid(row=4, columnspan=2, padx=5)
+        
+        # self.debug_frame = LabelFrame(self.network_frame, text="除錯工具")
+        # # 使用 thread 接收訊息
+        # self.debug_window = Toplevel(parent_frame)
+        # self.debug_window.title("除錯工具")
+        # self.debug_window.geometry("300x200")
+        # self.debug_frame = LabelFrame(self.debug_window, text="除錯工具")
+        # self.debug_frame.pack(padx=10, pady=10, fill="both", expand=True)
 
+        # Button(self.debug_frame, text="儲存傳送訊息", command=self.export_sent_messages).pack(fill="x", pady=2)
+        # Button(self.debug_frame, 
+        #     text="發送測試訊息", 
+        #     command=lambda: threading.Thread(target=self.auto_sent_message, daemon=True).start()).pack(fill="x", pady=2)
+        # Button(self.debug_frame, 
+        #     text="接收測試訊息", 
+        #     command=lambda: threading.Thread(target=self.auto_receive_message, daemon=True).start()).pack(fill="x", pady=2)
     
     def get_local_ip(self):
         try:
@@ -237,6 +255,15 @@ class NetworkManager:
             print("NetworkManager: 沒有連線, 無法傳訊")
             return            
         try:
+            # 紀錄訊息和傳送間隔
+            now = time.time()
+            if self.last_message_time is None: 
+                interval = 0.0
+            else: 
+                interval = now - self.last_message_time
+            self.last_message_time = now 
+            self.sent_messages.append((message, interval))
+            
             self.send_queue.put(message)
             # self.client_socket.send(message.encode('utf-8'))
             print(f"NetworkManager: 放入訊息: {message}")
@@ -372,6 +399,51 @@ class NetworkManager:
         else:
             self.server_status.config(fg="red", text=f"斷開連線{str(e)}")
         self.on_receive_message_failed.emit()
+        
+    def export_sent_messages(self, filename="sent_messages.log"):
+            with open(filename, "w", encoding="utf-8") as f:
+                for msg, interval in self.sent_messages:
+                    f.write(f"{interval:.3f},{msg}\n")
+            print(f"訊息已儲存到 {filename}")    
+    
+    def auto_sent_message(self, filename="sent_messages.log"):
+        with open(filename, "r", encoding="utf-8") as f:
+            lines = f.readlines()
+            for line in lines:
+                line = line.strip()
+                if not line:
+                    continue
+                # 只分割第一個逗號
+                interval_str, msg = line.split(",", 1)
+                interval = float(interval_str)
+                self.send_queue.put(msg)
+                time.sleep(interval)
+                print(f"自動傳送訊息: {msg}")  
+                
+    def auto_receive_message(self, filename="sent_messages.log"):
+        with open(filename, "r", encoding="utf-8") as f:
+            lines = f.readlines()
+            for line in lines:
+                line = line.strip()
+                if not line:
+                    continue
+                # 只分割第一個逗號
+                interval_str, msg = line.split(",", 1)
+                interval = float(interval_str)
+                
+                try:
+                    game_message = GameMessage.from_json(msg)
+                    print(f"自動化工具: 模擬收到遊戲訊息: {game_message}")
+                    if game_message.type == GameMessageType.IDENTIFY:
+                        self.handle_identify_message(game_message)
+                    else:
+                        self.recv_queue.put(game_message)
+                except json.JSONDecodeError:
+                    # 如果不是遊戲訊息，當作一般訊息處理
+                    self.recv_queue.put(msg)
+                    
+                time.sleep(interval)
+                print(f"自動接收訊息: {msg}")
 
 if __name__=="__main__":
     window:Tk = Tk()
