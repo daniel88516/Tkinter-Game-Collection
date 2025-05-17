@@ -531,7 +531,8 @@ class CanvasZombie(tk.Frame):
                     zombie_id = self.current_zombie_ids[r][c]
                     if zombie_id:
                         self.canvas.move(zombie_id, 0, delta_y)
-            self.after(int(1000 / fps), lambda: move_step(step + 1))
+            self.after(int(1000 / fps), 
+                       lambda: move_step(step + 1))
 
         move_step(1)
 
@@ -710,8 +711,9 @@ class CanvasZombie(tk.Frame):
         steps = int(total_duration / (1000 / fps))  # 約 60 幀
         height = 50
 
+
+        # 拋物線公式[0,1]
         def easing(t):
-            # 拋物線公式[0,1]
             return -4 * height * (t - 0.5) ** 2 + height
 
         for i in range(steps + 1):
