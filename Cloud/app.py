@@ -1,0 +1,47 @@
+from flask import Flask, request, jsonify
+import sqlite3
+
+app = Flask(__name__)
+DB_PATH = 'zombie_rand.db'
+
+def init_db():
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    c.execute('''CREATE TABLE IF NOT EXISTS scores (  --  確認表名是 scores
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    name TEXT,
+                    time INT,
+                    score INT)''')
+    conn.commit()
+    conn.close()
+
+@app.route('/submit_score', methods=['POST'])
+def submit_score():
+    data = request.json
+    name = data.get('name')
+    score = data.get('score')
+    play_time = data.get('time')
+
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    c.execute('INSERT INTO scores (name, time, score) VALUES (?, ?, ?)', (name, play_time, score)) 
+    conn.commit()
+    conn.close()
+    return jsonify({"status": "success"})
+
+@app.route('/get_ranking', methods=['GET'])
+def get_ranking():
+    try:
+        play_time = int(request.args.get('time', 30))
+        conn = sqlite3.connect(DB_PATH)
+        c = conn.cursor()
+        c.execute('SELECT name, score FROM scores WHERE time = ? ORDER BY score DESC LIMIT 100', (play_time,)) 
+        data = c.fetchall()
+        conn.close()
+        return jsonify(data)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+if __name__ == "__main__":
+    init_db()
+    app.run(host="0.0.0.0", port=8080)
