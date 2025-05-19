@@ -71,7 +71,6 @@ class CanvasZombie(tk.Frame):
 
         self.load_images()
         self.setup_canvas_elements()
-        self.setup_db()
 
         self.bind("<KeyPress>", self.key_handler)
         self.bind("<Configure>", self.on_window_resize)
@@ -198,6 +197,7 @@ class CanvasZombie(tk.Frame):
         self.x_img = load("Zombie圖片/x.png", (80, 80))
 
         
+    """
     def setup_db(self):
         db_path = os.path.join(os.path.dirname(__file__), "zombie_rand.db")
         self.conn = sqlite3.connect(db_path)
@@ -211,6 +211,7 @@ class CanvasZombie(tk.Frame):
             )
         ''')
         self.conn.commit()
+    """
 
     def mouse_click_handler(self, event):
         x, y = event.x, event.y
@@ -386,7 +387,6 @@ class CanvasZombie(tk.Frame):
             self.can_shoot = False
             self.canvas.itemconfig(self.status_text_id, text="")
             self.canvas.tag_raise(self.status_text_id)
-            #self.canvas.itemconfig(self.big_timer_text_id, text="")  
             self.prompt_save_score(self.score, self.game_time)
     
 
@@ -656,12 +656,13 @@ class CanvasZombie(tk.Frame):
 
         name = show_custom_dialog()
         if name:
-            self.save_score_to_db(name, score, time_mode)
-            self.upload_score(name, score, time_mode)  # 這裡加上
+            #self.save_score_to_db(name, score, time_mode)
+            self.upload_score(name, score, time_mode)  
 
         self.reset_game_state()
 
 
+    """
     def save_score_to_db(self, name, score, play_time):
         self.cursor.execute("SELECT score FROM scores WHERE name = ? AND time = ?", (name, play_time))
         result = self.cursor.fetchone()
@@ -682,6 +683,8 @@ class CanvasZombie(tk.Frame):
 
         self.conn.commit()
         messagebox.showinfo("紀錄結果", f"{msg}\n{max_msg}")
+    """
+    
     
     def on_window_resize(self, event=None):
         self.canvas.delete("all")
@@ -821,16 +824,43 @@ class CanvasZombie(tk.Frame):
         self.canvas.tag_raise(self.return_text)
 
     def upload_score(self, name, score, play_time):
-        url = "https://gamesuper.fly.dev/submit_score"
-        data = {"name": name, "score": score, "time": play_time}
+        ranking_url = "https://gamesuper.fly.dev/get_ranking"
+        upload_url = "https://gamesuper.fly.dev/submit_score"
+
         try:
-            response = requests.post(url, json=data, timeout=5)
+            response = requests.get(ranking_url, params={"time": play_time}, timeout=5)
             if response.status_code == 200:
-                print("分數上傳成功")
+                rankings = response.json()
+
+                old_score = 0
+                max_score = 0
+                for player_name, player_score in rankings:
+                    if player_name == name:
+                        old_score = player_score
+                    if player_score > max_score:
+                        max_score = player_score
+
+                if old_score:
+                    if score > old_score:
+                        msg = f"🎉 {name} 破紀錄了！（{old_score} → {score}）"
+                        # 覆蓋更新（你要確認伺服器這個 POST 可以覆蓋舊分數）
+                        requests.post(upload_url, json={"name": name, "score": score, "time": play_time}, timeout=5)
+                    else:
+                        msg = f"😅 {name} 分數比之前低，未更新紀錄（{score} ≦ {old_score}）"
+                else:
+                    msg = f"✅ {name} 的新紀錄已儲存：{score} 分"
+                    requests.post(upload_url, json={"name": name, "score": score, "time": play_time}, timeout=5)
+
+                max_msg = f"🏆 {name} 是 {play_time} 秒模式的最高紀錄保持者！" if score >= max_score else ""
+                messagebox.showinfo("紀錄結果", f"{msg}\n{max_msg}")
+
             else:
-                print("上傳失敗", response.text)
+                messagebox.showerror("錯誤", "查詢分數失敗，請稍後再試。")
+
         except Exception as e:
-            print("連線錯誤", e)
+            messagebox.showerror("連線錯誤", f"無法連接伺服器：{e}")
+
+
 
 
 

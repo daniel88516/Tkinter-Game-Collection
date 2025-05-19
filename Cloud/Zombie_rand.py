@@ -3,8 +3,7 @@ from PIL import Image, ImageTk
 import requests
 import os
 
-API_BASE_URL = 'https://gamesuper.fly.dev'  # 你的 Fly.io API 網址
-
+API_BASE_URL = 'https://gamesuper.fly.dev'  
 def get_ranking_from_api(play_time=30):
     try:
         res = requests.get(f"{API_BASE_URL}/get_ranking", params={'time': play_time}, timeout=5)
