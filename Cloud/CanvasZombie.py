@@ -662,7 +662,7 @@ class CanvasZombie(tk.Frame):
         self.reset_game_state()
 
 
-    """
+    
     def save_score_to_db(self, name, score, play_time):
         self.cursor.execute("SELECT score FROM scores WHERE name = ? AND time = ?", (name, play_time))
         result = self.cursor.fetchone()
@@ -683,7 +683,6 @@ class CanvasZombie(tk.Frame):
 
         self.conn.commit()
         messagebox.showinfo("紀錄結果", f"{msg}\n{max_msg}")
-    """
     
     
     def on_window_resize(self, event=None):
@@ -828,38 +827,44 @@ class CanvasZombie(tk.Frame):
         upload_url = "https://gamesuper.fly.dev/submit_score"
 
         try:
+            # 1. 查詢現有排行榜資料
             response = requests.get(ranking_url, params={"time": play_time}, timeout=5)
             if response.status_code == 200:
                 rankings = response.json()
-
                 old_score = 0
                 max_score = 0
+
                 for player_name, player_score in rankings:
                     if player_name == name:
                         old_score = player_score
                     if player_score > max_score:
                         max_score = player_score
 
+                # 2. 根據結果決定提示與是否上傳
                 if old_score:
                     if score > old_score:
                         msg = f"🎉 {name} 破紀錄了！（{old_score} → {score}）"
-                        # 覆蓋更新（你要確認伺服器這個 POST 可以覆蓋舊分數）
-                        requests.post(upload_url, json={"name": name, "score": score, "time": play_time}, timeout=5)
+                        # 上傳新分數
+                        upload_response = requests.post(upload_url, json={"name": name, "score": score, "time": play_time}, timeout=5)
+                        if upload_response.status_code != 200:
+                            messagebox.showerror("上傳失敗", "無法更新新的分數紀錄。")
                     else:
                         msg = f"😅 {name} 分數比之前低，未更新紀錄（{score} ≦ {old_score}）"
                 else:
                     msg = f" {name} 的新紀錄已儲存：{score} 分"
-                    requests.post(upload_url, json={"name": name, "score": score, "time": play_time}, timeout=5)
+                    # 新玩家直接上傳分數
+                    upload_response = requests.post(upload_url, json={"name": name, "score": score, "time": play_time}, timeout=5)
+                    if upload_response.status_code != 200:
+                        messagebox.showerror("上傳失敗", "無法儲存新的分數紀錄。")
 
                 max_msg = f"🏆 {name} 是 {play_time} 秒模式的最高紀錄保持者！" if score >= max_score else ""
                 messagebox.showinfo("紀錄結果", f"{msg}\n{max_msg}")
 
             else:
-                messagebox.showerror("錯誤", "查詢分數失敗，請稍後再試。")
+                messagebox.showerror("錯誤", "無法查詢排行榜資料，請稍後再試。")
 
         except Exception as e:
             messagebox.showerror("連線錯誤", f"無法連接伺服器：{e}")
-
 
 
 

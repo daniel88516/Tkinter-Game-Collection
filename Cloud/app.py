@@ -25,23 +25,20 @@ def submit_score():
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
 
-    # 先查詢是否已經有這個玩家的紀錄
+    # 查詢是否已有紀錄
     c.execute('SELECT score FROM scores WHERE name = ? AND time = ?', (name, play_time))
     result = c.fetchone()
 
     if result:
         old_score = result[0]
-        # 只有新分數比較高時才更新
         if score > old_score:
             c.execute('UPDATE scores SET score = ? WHERE name = ? AND time = ?', (score, name, play_time))
     else:
-        # 沒有紀錄就插入
         c.execute('INSERT INTO scores (name, time, score) VALUES (?, ?, ?)', (name, play_time, score))
 
     conn.commit()
     conn.close()
     return jsonify({"status": "success"})
-
 
 @app.route('/get_ranking', methods=['GET'])
 def get_ranking():
