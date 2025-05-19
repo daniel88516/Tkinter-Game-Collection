@@ -848,7 +848,7 @@ class CanvasZombie(tk.Frame):
                     else:
                         msg = f"😅 {name} 分數比之前低，未更新紀錄（{score} ≦ {old_score}）"
                 else:
-                    msg = f"✅ {name} 的新紀錄已儲存：{score} 分"
+                    msg = f" {name} 的新紀錄已儲存：{score} 分"
                     requests.post(upload_url, json={"name": name, "score": score, "time": play_time}, timeout=5)
 
                 max_msg = f"🏆 {name} 是 {play_time} 秒模式的最高紀錄保持者！" if score >= max_score else ""
