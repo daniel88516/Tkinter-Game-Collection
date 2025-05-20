@@ -16,7 +16,14 @@ primary_region = 'hkg'
   min_machines_running = 0
   processes = ['app']
 
+[deploy]
+  strategy = "immediate"
+
 [[vm]]
   memory = '1gb'
   cpu_kind = 'shared'
   cpus = 1
+
+[mounts]
+  source = "db_data"
+  destination = "/data"

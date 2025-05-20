@@ -121,14 +121,14 @@ class RankingPage(tk.Frame):
 
         self.create_controls()
 
-        # 只在資料還沒抓回來時顯示「連線中」
+        # 沒網路
         if self.results is None:
             self.canvas.create_text(
                 self.canvas.winfo_width() / 2,
                 self.canvas.winfo_height() / 2,
-                text="排行榜連線中...\n請稍候。",
+                text="⚠️ 排行榜連線失敗\n       請檢查網路連線",
                 font=("微軟正黑體", 24, "bold"),
-                fill="#666666"
+                fill="red"
             )
             return
 

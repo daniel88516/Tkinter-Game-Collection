@@ -2,7 +2,7 @@ from flask import Flask, request, jsonify
 import sqlite3
 
 app = Flask(__name__)
-DB_PATH = 'zombie_rand.db'
+DB_PATH = '/data/zombie_rand.db'
 
 def init_db():
     conn = sqlite3.connect(DB_PATH)

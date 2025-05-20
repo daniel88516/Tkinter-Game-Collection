@@ -1,0 +1,161 @@
+📦 Fly.io Flask + SQLite 雲端部署筆記
+
+  適用於 Flask + SQLite 組合，搭配 Fly.io 的 Volume 永久資料保存方案。
+
+🧭 架構圖（文字版）
+
+  ┌─────────────────────────────┐
+  │        使用者瀏覽器         │
+  └────────────┬────────────────┘
+              │ HTTP 請求
+              ▼
+  ┌─────────────────────────────┐
+  │         Fly.io App VM        │
+  │                             │
+  │  ┌────────────┐             │
+  │  │  Flask app │ <─── app.py │
+  │  └─────┬──────┘             │
+  │        │                    │
+  │        ▼                    │
+  │  ┌────────────┐             │
+  │  │ SQLite DB  │ ← zombie_rand.db (掛載 Volume: /data)
+  │  └────────────┘             │
+  └─────────────────────────────┘
+
+✅ 前提需求
+
+  已安裝 Fly CLI
+
+  已註冊並登入 Fly.io 帳號 (fly auth login)
+
+  已建立 Fly 應用 (fly launch or fly apps create)
+
+  專案結構中已有：
+
+  app.py
+
+  zombie_rand.db（本機原始資料庫）
+
+  Dockerfile
+
+  fly.toml
+
+📁 最終 Dockerfile
+
+  FROM python:3.11-slim
+
+  WORKDIR /app
+
+  COPY . .
+
+  RUN pip install --no-cache-dir flask
+  RUN mkdir -p /data
+
+  CMD ["python", "app.py"]
+
+  ⚙️ fly.toml 範例設定（重點片段）
+
+  app = "gamesuper"
+  primary_region = "hkg"
+
+  [http_service]
+    internal_port = 8080
+    force_https = true
+    auto_stop_machines = "stop"
+    auto_start_machines = true
+    min_machines_running = 0
+    processes = ["app"]
+
+  [mounts]
+    source = "db_data"
+    destination = "/data"
+
+  [deploy]
+    strategy = "immediate"
+
+🚀 部署流程
+
+  1️⃣ 建立 Volume（若尚未建立）
+
+    fly volumes create db_data --region hkg
+
+  2️⃣ 部署應用
+
+    fly deploy
+
+    成功訊息中應包含：
+
+    Creating a 1 GB volume named 'db_data' for process group 'app'.
+    No machines in group app, launching a new machine
+
+  3️⃣ 確認部署狀態
+
+    fly status
+
+    應看到：
+
+    App is running
+    1 machine deployed
+    Volume db_data attached at /data
+
+    📤 上傳本機資料庫到 Volume
+
+  4️⃣ 進入 SSH 刪除原本空的 zombie_rand.db
+
+    fly ssh console
+    rm /data/zombie_rand.db
+    exit
+
+  5️⃣ 使用 SFTP 上傳你的 zombie_rand.db（有資料版本）
+
+    fly ssh sftp shell
+    put zombie_rand.db /data/zombie_rand.db
+
+    出現 12288 bytes written 或更大的數字即為成功。
+
+  6️⃣ 確認上傳是否成功
+
+    fly ssh console
+    ls -lh /data/zombie_rand.db
+
+    應看到：
+
+    -rw-r--r-- 1 root root 40K ... zombie_rand.db
+
+  7️⃣ 最後驗證 API 功能
+
+    打開網址檢查：
+
+    https://gamesuper.fly.dev/get_ranking?time=30
+
+    ✅ 若資料正確顯示，代表部署 + Volume 掛載 + SQLite 調用完全成功。
+
+  🔄 常見問題
+
+    問題
+
+    解法
+
+    SFTP 傳不上去
+
+    確認是否已有 zombie_rand.db，需先刪除再傳
+
+    Volume 沒掛成功
+
+    檢查 fly.toml 是否有 [mounts] 區段
+
+    資料消失
+
+    確認是否在 /data/zombie_rand.db 上寫入
+
+    .db 看似有傳但還是空
+
+    本機可能傳的是空的 .db，請確認內容或用 SQLite Viewer 驗證
+
+✅ 成功指標
+
+  fly status 顯示正常運作
+
+  /data/zombie_rand.db 大小合理（非12K）
+
+  API 能正常取出排行榜資料
