@@ -77,7 +77,7 @@ class RankingPage(tk.Frame):
 
         canvas_width = self.canvas.winfo_width()
         canvas_height = self.canvas.winfo_height()
-        button_y = canvas_height - 260
+        button_y = canvas_height - 200
         left_x = canvas_width / 2 - 280
         right_x = canvas_width / 2 + 240
 
