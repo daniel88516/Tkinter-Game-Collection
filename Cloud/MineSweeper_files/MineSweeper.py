@@ -1,12 +1,13 @@
 from tkinter import * 
 from tkinter import messagebox
 import os
-from MineSweeper_Difficulty import DifficultyConfig, Difficulty
 from MineSweeper_BoardManager import BoardManager
 from MineSweeper_NetworkManager import NetworkManager
 from MineSweeper_GameMessage import GameMessage, GameMessageType
 from MineSweeper_ChatManager import ChatManager
 from MineSweeper_Timer import CountDownTimer
+from MineSweeper_Difficulty import DifficultyConfig, Difficulty
+
 
 class MineSweeper:
     """主遊戲類"""

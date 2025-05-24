@@ -1,8 +1,13 @@
 import os
-import subprocess
 from tkinter import *
 from tkinter import ttk, messagebox
 from PIL import Image, ImageTk
+from ThreeHall import ThreeHall
+from TicTacToe import TicTacToe
+from MineSweeper import MineSweeper
+from MineSweeper_SinglePlayer import MineSweeper as SingleMine
+from Z_main import ZMain
+import importlib
 
 class GameMenu:
     def __init__(self):
@@ -78,11 +83,11 @@ class GameMenu:
 
         # 遊戲清單
         self.games = {
-            "Zombie": os.path.join(base_path, "Z_main.py"),
-            "Monty Hall": os.path.join(base_path, "ThreeHall.py"),
-            "井字遊戲": os.path.join(base_path, "TicTacToe.py"),
-            "踩地雷(單人版)": os.path.join(base_path, "MineSweeper", "MineSweeper_SinglePlayer.py"),
-            "踩地雷(多人版)": os.path.join(base_path, "MineSweeper", "MineSweeper.py")
+            "🧟 殭屍射擊": ("Z_main", "ZMain"),
+            "💣 踩地雷（雙人）": ("MineSweeper", "MineSweeper"),
+            "💣 踩地雷（單人）": ("MineSweeper_SinglePlayer", "MineSweeper"),
+            "🚪 Monty Hall": ("ThreeHall", "ThreeHall"),
+            "⭕❌ TicTacToe": ("TicTacToe", "TicTacToe"),
         }
 
         # TreeView條紋列
@@ -131,21 +136,23 @@ class GameMenu:
 
     def run_selected_game(self):
         selected_item = self.tree.selection()
-        if selected_item:
-            game_name = self.tree.item(selected_item[0])["values"][0]
-            py_file = self.games.get(game_name)
-            if py_file:
-                full_path = os.path.join(os.path.dirname(__file__), py_file)
-                
-                # 檢查該遊戲是否已經啟動
-                proc = self.running_processes.get(game_name)
-                if proc and proc.poll() is None:  # 還在跑
-                    messagebox.showinfo("提示", f"{game_name} 已經啟動了！")
-                    return
+        if not selected_item:
+            return
 
-                # 沒有在跑，啟動新的
-                new_proc = subprocess.Popen(["python", full_path], shell=True)
-                self.running_processes[game_name] = new_proc
+        game_name = self.tree.item(selected_item[0])["values"][0]
+        module_name, class_name = self.games.get(game_name)
+
+        # 動態匯入
+        module = importlib.import_module(module_name)
+        game_class = getattr(module, class_name)
+
+        top = Toplevel(self.window)
+        game_instance = game_class(top)
+
+        if isinstance(game_instance, Frame):
+            game_instance.pack(fill="both", expand=True)
+        if hasattr(game_instance, "start"):
+            game_instance.start()
 
                 
     def show_game_tutorial(self):
