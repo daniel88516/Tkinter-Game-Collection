@@ -8,6 +8,7 @@ from MineSweeper import MineSweeper
 from MineSweeper_SinglePlayer import MineSweeper as SingleMine
 from Z_main import ZMain
 import importlib
+from MineSweeper_RankingPage import RankingPage 
 
 class GameMenu:
     def __init__(self):
@@ -36,7 +37,7 @@ class GameMenu:
         banner_label.pack(pady=10)
 
         # 中央內容容器（限制 TreeView 尺寸）
-        content_frame = Frame(self.window, bg="black", width=700, height=400)
+        content_frame = Frame(self.window, bg="black", width=700, height=300)
         content_frame.pack(pady=20)
         content_frame.pack_propagate(False)  # 禁止根據內容自動壓縮尺寸
 
@@ -86,8 +87,6 @@ class GameMenu:
             "🧟 殭屍射擊": ("Z_main", "ZMain"),
             "💣 踩地雷（雙人）": ("MineSweeper", "MineSweeper"),
             "💣 踩地雷（單人）": ("MineSweeper_SinglePlayer", "MineSweeper"),
-            "🚪 Monty Hall": ("ThreeHall", "ThreeHall"),
-            "⭕❌ TicTacToe": ("TicTacToe", "TicTacToe"),
         }
 
         # TreeView條紋列
@@ -134,6 +133,7 @@ class GameMenu:
             self.tree.selection_set(item)
             self.menu.post(event.x_root, event.y_root)
 
+
     def run_selected_game(self):
         selected_item = self.tree.selection()
         if not selected_item:
@@ -142,7 +142,12 @@ class GameMenu:
         game_name = self.tree.item(selected_item[0])["values"][0]
         module_name, class_name = self.games.get(game_name)
 
-        # 動態匯入
+        # 特殊處理踩地雷單人版，需要創建完整的 Notebook 分頁系統
+        if game_name == "💣 踩地雷（單人）":
+            self.create_minesweeper_with_ranking()
+            return
+
+        # 動態匯入其他遊戲
         module = importlib.import_module(module_name)
         game_class = getattr(module, class_name)
 
@@ -153,6 +158,46 @@ class GameMenu:
             game_instance.pack(fill="both", expand=True)
         if hasattr(game_instance, "start"):
             game_instance.start()
+
+    def create_minesweeper_with_ranking(self):
+        """創建完整的踩地雷遊戲視窗，包含排行榜分頁"""
+        style = ttk.Style()
+        def on_tab_change(event):
+            """處理 Notebook 分頁切換事件"""
+            selected_tab = event.widget.select()
+            selected_tab_text = event.widget.tab(selected_tab, "text")
+            if selected_tab_text == "排行榜":
+                screen_width = minesweeper_window.winfo_screenwidth()
+                screen_height = minesweeper_window.winfo_screenheight()
+                w, h = 1920, 1080
+                x = (screen_width - w) // 2
+                y = (screen_height - h) // 2
+                minesweeper_window.geometry(f"{w}x{h}+{x}+{y}")
+                minesweeper_window.state('zoomed')
+            else:
+                minesweeper_window.geometry('')
+                minesweeper_window.state('normal')
+        
+        # 創建踩地雷遊戲視窗
+        minesweeper_window = Toplevel(self.window)
+        minesweeper_window.title("踩地雷")
+
+        # 創建 Notebook 分頁系統
+        notebook = ttk.Notebook(minesweeper_window)
+        style.configure("TNotebook.Tab", focuscolor="none")
+        notebook.pack(expand=True, fill=BOTH)
+
+        # 創建踩地雷遊戲頁面
+        minesweeper_game = SingleMine(minesweeper_window)
+        minesweeper_window.wm_iconphoto(False, minesweeper_game.tile_images["TileMine"])
+        notebook.add(minesweeper_game, text="遊戲頁面")
+
+        # 創建排行榜頁面
+        rank_page = RankingPage(minesweeper_window)
+        notebook.add(rank_page, text="排行榜")
+
+        # 綁定分頁切換事件
+        notebook.bind("<<NotebookTabChanged>>", on_tab_change)
 
                 
     def show_game_tutorial(self):
@@ -216,3 +261,6 @@ class GameMenu:
 
 if __name__ == "__main__":
     GameMenu()
+
+
+
