@@ -1,13 +1,14 @@
+import sys 
 import os
 from tkinter import *
 from tkinter import ttk, messagebox
 from PIL import Image, ImageTk
 from ThreeHall import ThreeHall
 from TicTacToe import TicTacToe
-from MineSweeper import MineSweeper
-from MineSweeper_SinglePlayer import MineSweeper as SingleMine
 from Z_main import ZMain
 import importlib
+sys.path.append(os.path.join(os.path.dirname(__file__), "MineSweeper_files"))
+from MineSweeper import MineSweeper
 
 class GameMenu:
     def __init__(self):
