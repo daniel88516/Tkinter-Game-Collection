@@ -1,19 +1,21 @@
+import sys 
 import os
 from tkinter import *
 from tkinter import ttk, messagebox
 from PIL import Image, ImageTk
 from ThreeHall import ThreeHall
 from TicTacToe import TicTacToe
-from MineSweeper import MineSweeper
-from MineSweeper_SinglePlayer import MineSweeper as SingleMine
 from Z_main import ZMain
 import importlib
+<<<<<<< HEAD
 from MineSweeper_RankingPage import RankingPage 
+=======
+sys.path.append(os.path.join(os.path.dirname(__file__), "MineSweeper_files"))
+from MineSweeper import MineSweeper
+>>>>>>> 947a18282592fccbda8cf174adcac628ac385772
 
 class GameMenu:
     def __init__(self):
-        
-
         # 建立主視窗
         self.window = Tk()
         self.window.title("Game Menu")
@@ -135,13 +137,14 @@ class GameMenu:
 
 
     def run_selected_game(self):
-        selected_item = self.tree.selection()
-        if not selected_item:
-            return
+            selected_item = self.tree.selection()
+            if not selected_item:
+                return
 
-        game_name = self.tree.item(selected_item[0])["values"][0]
-        module_name, class_name = self.games.get(game_name)
+            game_name = self.tree.item(selected_item[0])["values"][0]
+            module_name, class_name = self.games.get(game_name)
 
+<<<<<<< HEAD
         # 特殊處理踩地雷單人版，需要創建完整的 Notebook 分頁系統
         if game_name == "💣 踩地雷（單人）":
             self.create_minesweeper_with_ranking()
@@ -150,15 +153,19 @@ class GameMenu:
         # 動態匯入其他遊戲
         module = importlib.import_module(module_name)
         game_class = getattr(module, class_name)
+=======
+            module = importlib.import_module(module_name)
+            game_class = getattr(module, class_name)
+>>>>>>> 947a18282592fccbda8cf174adcac628ac385772
 
-        top = Toplevel(self.window)
-        game_instance = game_class(top)
+            top = Toplevel(self.window)
 
-        if isinstance(game_instance, Frame):
-            game_instance.pack(fill="both", expand=True)
-        if hasattr(game_instance, "start"):
-            game_instance.start()
+            # 特別處理踩地雷（單人）分頁
+            if module_name == "MineSweeper_SinglePlayer":
+                from MineSweeper_RankingPage import RankingPage
+                from tkinter.ttk import Notebook
 
+<<<<<<< HEAD
     def create_minesweeper_with_ranking(self):
         """創建完整的踩地雷遊戲視窗，包含排行榜分頁"""
         style = ttk.Style()
@@ -199,6 +206,47 @@ class GameMenu:
         # 綁定分頁切換事件
         notebook.bind("<<NotebookTabChanged>>", on_tab_change)
 
+=======
+                notebook = Notebook(top)
+                notebook.pack(expand=True, fill="both")
+
+                minesweeper_game = game_class(notebook)
+                notebook.add(minesweeper_game, text="遊戲頁面")
+
+                rank_page = RankingPage(notebook)
+                notebook.add(rank_page, text="排行榜")
+
+                # 分頁切換事件
+                def on_tab_change(event):
+                    selected_tab = event.widget.select()
+                    selected_tab_text = event.widget.tab(selected_tab, "text")
+                    if selected_tab_text == "排行榜":
+                        screen_width = top.winfo_screenwidth()
+                        screen_height = top.winfo_screenheight()
+                        w, h = 1920, 1080
+                        x = (screen_width - w) // 2
+                        y = (screen_height - h) // 2
+                        top.geometry(f"{w}x{h}+{x}+{y}")
+                        top.state('zoomed')
+                    else:
+                        top.geometry('')
+                        top.state('normal')
+                notebook.bind("<<NotebookTabChanged>>", on_tab_change)
+
+                # 設定 icon
+                top.wm_iconphoto(False, minesweeper_game.tile_images["TileMine"])
+
+                # 啟動 mainloop（如果有 start 方法）
+                if hasattr(minesweeper_game, "start"):
+                    # 不要呼叫 mainloop，因為 GameMenu 已經有 mainloop
+                    pass
+            else:
+                game_instance = game_class(top)
+                if isinstance(game_instance, Frame):
+                    game_instance.pack(fill="both", expand=True)
+                if hasattr(game_instance, "start"):
+                    pass
+>>>>>>> 947a18282592fccbda8cf174adcac628ac385772
                 
     def show_game_tutorial(self):
         selected_item = self.tree.selection()
