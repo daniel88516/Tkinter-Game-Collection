@@ -196,7 +196,7 @@ class MineSweeper(Frame):
         self.is_game_over = False
         self.first_click = True
         self.countup_timer.reset()
-        self.safe_reveal_btn.config(state=DISABLED)
+        self.safe_reveal_btn.config(image=self.tile_images["LightOn"],state=DISABLED)
         self.safe_reveal_var = True
         self.gameBoard.reset()
         self.update_board()
@@ -207,6 +207,10 @@ class MineSweeper(Frame):
         self.is_game_over = True
         self.stop_timer()
         messagebox.showerror("遊戲結束", f"{self.get_random_final_message()}, 成功在{self.get_timer_value()}內失敗了!")
+        top_window = self.winfo_toplevel()
+        top_window.lift()
+        top_window.attributes("-topmost", True)
+        top_window.after(100, lambda: top_window.attributes("-topmost", False))
         
     def check_win_condition(self):
         """勝利唾手可得"""
@@ -411,6 +415,10 @@ class MineSweeper(Frame):
             
             db.close()
             name_popup.destroy()
+            top_window = self.winfo_toplevel()
+            top_window.lift()
+            top_window.attributes("-topmost", True)
+            top_window.after(100, lambda: top_window.attributes("-topmost", False))
             
         button_frame = Frame(name_popup)
         button_frame.pack(pady=5)

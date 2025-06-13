@@ -1,13 +1,31 @@
-import sqlite3, os
-from MineSweeper_Difficulty import DifficultyConfig
+import sqlite3, os, sys, shutil
+from pathlib import Path
+from MineSweeper_Difficulty import DifficultyConfig, Difficulty
 
 class Database:
     def __init__(self, db_name='minesweeper.db'):
-        # 確保資料庫路徑是相對於當前檔案的路徑
-        base_dir = os.path.dirname(os.path.abspath(__file__))
-        db_path = os.path.join(base_dir, db_name)
+        # 遊戲的資料夾：C:\Users\你\AppData\Local\MineSweeper
+        user_data_dir = Path(os.getenv('LOCALAPPDATA')) / "MineSweeper"
+        user_data_dir.mkdir(parents=True, exist_ok=True)
 
-        self.connection = sqlite3.connect(db_path)
+        self.db_path = user_data_dir / db_name
+
+        # 如果資料庫檔案不存在，就從目前資料夾複製一份初始檔
+        if not self.db_path.exists():
+            # 檢查打包與否
+            if getattr(sys, 'frozen', False):
+                base_dir = Path(sys._MEIPASS)  # pyinstaller打包後的臨時資料夾
+            else:
+                base_dir = Path(__file__).parent
+
+            source_path = base_dir / db_name
+            if source_path.exists():
+                shutil.copy(source_path, self.db_path)
+            else:
+                print(f"⚠️ 找不到初始資料庫檔案：{source_path}")
+
+        # 連線
+        self.connection = sqlite3.connect(self.db_path)
         self.cursor = self.connection.cursor()
         self.create_table()
 
@@ -89,5 +107,4 @@ class Database:
         self.connection.close()
 if __name__ == "__main__": 
     db = Database()
-    db.delete_all_scores()
     db.close()
