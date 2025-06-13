@@ -160,6 +160,13 @@ class GameMenu:
         minesweeper_window = Toplevel(self.window)
         minesweeper_window.title("踩地雷")
 
+        # 讓踩地雷視窗跳到最前面
+        minesweeper_window.deiconify()
+        minesweeper_window.lift()
+        minesweeper_window.focus_force()
+        minesweeper_window.attributes("-topmost", True)
+        minesweeper_window.after(200, lambda: minesweeper_window.attributes("-topmost", False))
+
         notebook = Notebook(minesweeper_window)
         notebook.pack(expand=True, fill=BOTH)
 
