@@ -258,7 +258,7 @@ class CanvasZombie(tk.Frame):
         tk.Button(win, text="60 秒", font=btn_font, width=btn_width, height=btn_height,
                 command=lambda: set_time(60)).pack(pady=10)
         tk.Button(win, text="自訂時間", font=btn_font, width=btn_width, height=btn_height,
-                command=lambda: self.ask_custom_time(win)).pack(pady=10)
+              command=lambda: self.ask_custom_time(win)).pack(pady=10)
         win.bind("<Return>", lambda e: win.focus_get().invoke())
 
         win.grab_set()
@@ -271,11 +271,17 @@ class CanvasZombie(tk.Frame):
                     raise ValueError
                 self.game_time = seconds
                 self.time_left = self.game_time
+
+
+                if hasattr(self, 'title_img_id'):
+                  self.canvas.delete(self.title_img_id)
+
+
                 top.destroy()
                 parent.destroy()
                 self.start_countdown()
             except:
-                messagebox.showerror("錯誤", "請輸入有效的正整數", parent=top)
+                messagebox.showerror("錯誤", "請輸入有效的正整數", parent=top )
 
         top = tk.Toplevel(parent)
         top.withdraw()  # 先隱藏
@@ -353,7 +359,8 @@ class CanvasZombie(tk.Frame):
 
 
     def start_game(self):
-    
+
+
          # 清除倒數圖片並刷新畫面
         def clear_countdown_image():
             self.canvas.delete(self.countdown_image_id)
@@ -624,6 +631,8 @@ class CanvasZombie(tk.Frame):
             
     def prompt_save_score(self, score, time_mode):
         if time_mode not in [30, 60]:
+            messagebox.showinfo("遊戲結束", f"你的分數是 {score} 分", parent=self)
+            self.reset_game_state()
             return
 
         def show_custom_dialog():
@@ -682,7 +691,7 @@ class CanvasZombie(tk.Frame):
         max_msg = f"🏆 {name} 是 {play_time} 秒模式的最高紀錄保持者！" if score >= max_score else ""
 
         self.conn.commit()
-        messagebox.showinfo("紀錄結果", f"{msg}\n{max_msg}")
+        messagebox.showinfo("紀錄結果", f"{msg}\n{max_msg}", parent=self)
     
     
     def on_window_resize(self, event=None):
@@ -847,7 +856,7 @@ class CanvasZombie(tk.Frame):
                         # 上傳新分數
                         upload_response = requests.post(upload_url, json={"name": name, "score": score, "time": play_time}, timeout=5)
                         if upload_response.status_code != 200:
-                            messagebox.showerror("上傳失敗", "無法更新新的分數紀錄。")
+                            messagebox.showerror("上傳失敗", "無法更新新的分數紀錄。", parent=self)
                     else:
                         msg = f"😅 {name} 分數比之前低，未更新紀錄（{score} ≦ {old_score}）"
                 else:
@@ -855,16 +864,16 @@ class CanvasZombie(tk.Frame):
                     # 新玩家直接上傳分數
                     upload_response = requests.post(upload_url, json={"name": name, "score": score, "time": play_time}, timeout=5)
                     if upload_response.status_code != 200:
-                        messagebox.showerror("上傳失敗", "無法儲存新的分數紀錄。")
+                        messagebox.showerror("上傳失敗", "無法儲存新的分數紀錄。", parent=self)
 
                 max_msg = f"🏆 {name} 是 {play_time} 秒模式的最高紀錄保持者！" if score >= max_score else ""
-                messagebox.showinfo("紀錄結果", f"{msg}\n{max_msg}")
+                messagebox.showinfo("紀錄結果", f"{msg}\n{max_msg}", parent=self)
 
             else:
-                messagebox.showerror("錯誤", "無法查詢排行榜資料，請稍後再試。")
+                messagebox.showerror("錯誤", "無法查詢排行榜資料，請稍後再試。", parent=self)
 
         except Exception as e:
-            messagebox.showerror("連線錯誤", f"無法連接伺服器：{e}")
+            messagebox.showerror("連線錯誤", f"無法連接伺服器：{e}", parent=self)
 
 
 

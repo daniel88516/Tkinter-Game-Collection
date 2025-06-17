@@ -59,13 +59,15 @@ class RankingPage(tk.Frame):
             "selectcolor": "#000000"
         }
 
+        # 根據選擇的時間設定顏色
+        color_30 = "#FF00FF" if self.selected_time.get() == 30 else "#666666"
+        color_60 = "#FF00FF" if self.selected_time.get() == 60 else "#666666"
+
         rb_30 = tk.Radiobutton(self.canvas, text="30 秒", variable=self.selected_time, value=30,
-                               command=self.reset_page, fg="#FF00FF", **rb_style)
-        self.canvas.create_window(700, 50, window=rb_30, anchor="nw")
+                            command=self.reset_page, fg=color_30, **rb_style)
 
         rb_60 = tk.Radiobutton(self.canvas, text="60 秒", variable=self.selected_time, value=60,
-                               command=self.reset_page, fg="#666666", **rb_style)
-        self.canvas.create_window(800, 50, window=rb_60, anchor="nw")
+                            command=self.reset_page, fg=color_60, **rb_style)
 
         base = os.path.dirname(__file__)
         arrow_path = os.path.join(base, "Zombie圖片/箭頭.png")
@@ -86,6 +88,9 @@ class RankingPage(tk.Frame):
 
         self.canvas.tag_bind("left_arrow", "<Button-1>", lambda e: self.prev_page())
         self.canvas.tag_bind("right_arrow", "<Button-1>", lambda e: self.next_page())
+
+        self.canvas.create_window(700, 50, window=rb_30, anchor="nw")
+        self.canvas.create_window(800, 50, window=rb_60, anchor="nw")
 
     def reset_page(self):
         self.current_page = 0
