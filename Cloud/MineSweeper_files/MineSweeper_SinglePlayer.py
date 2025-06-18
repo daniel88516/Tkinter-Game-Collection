@@ -206,11 +206,11 @@ class MineSweeper(Frame):
         self.reveal_all_mines()
         self.is_game_over = True
         self.stop_timer()
-        messagebox.showerror("遊戲結束", f"{self.get_random_final_message()}, 成功在{self.get_timer_value()}內失敗了!")
         top_window = self.winfo_toplevel()
-        top_window.lift()
-        top_window.attributes("-topmost", True)
-        top_window.after(100, lambda: top_window.attributes("-topmost", False))
+        messagebox.showerror("遊戲結束", f"{self.get_random_final_message()}, 成功在{self.get_timer_value()}內失敗了!", parent=self)
+        # top_window.lift()
+        # top_window.attributes("-topmost", True)
+        # top_window.after(100, lambda: top_window.attributes("-topmost", False))
         
     def check_win_condition(self):
         """勝利唾手可得"""
@@ -385,7 +385,12 @@ class MineSweeper(Frame):
     def show_victory_popup(self):
         config = self.gameBoard.config
         
-        messagebox.showinfo("恭喜", f"你在 {self.get_timer_value()} 內贏得了遊戲！")
+        messagebox.showinfo("恭喜", f"你在 {self.get_timer_value()} 內贏得了遊戲！", parent=self)
+        # top_window = self.winfo_toplevel()
+        # top_window.lift()
+        # top_window.attributes("-topmost", True)
+        # top_window.after(100, lambda: top_window.attributes("-topmost", False))
+        
         # 建立輸入名字的 Toplevel 視窗
         name_popup = Toplevel()
         name_popup.title("輸入名字")
@@ -402,23 +407,23 @@ class MineSweeper(Frame):
         def on_confirm():
             name = entry.get().strip()
             if not name: 
-                messagebox.showerror("錯誤", "名字不能為空！")
+                messagebox.showerror("錯誤", "名字不能為空！", parent=self)
                 return
             minutes, seconds, millis = map(int, self.get_timer_value().replace(":", " ").replace(".", " ").split())
             db = Database()
             success = db.insert_score(name, minutes, seconds, millis, config)
             
             if success:
-                messagebox.showinfo("紀錄結果", f"🎉 {name} 的新紀錄已成功加入排行榜！")
+                messagebox.showinfo("紀錄結果", f"🎉 {name} 的新紀錄已成功加入排行榜！", parent=self)
             else:
-                messagebox.showinfo("紀錄結果", f"😅 {name} 的成績未超過舊有紀錄，未更新。")
+                messagebox.showinfo("紀錄結果", f"😅 {name} 的成績未超過舊有紀錄，未更新。", parent=self)
             
             db.close()
             name_popup.destroy()
-            top_window = self.winfo_toplevel()
-            top_window.lift()
-            top_window.attributes("-topmost", True)
-            top_window.after(100, lambda: top_window.attributes("-topmost", False))
+            # top_window = self.winfo_toplevel()
+            # top_window.lift()
+            # top_window.attributes("-topmost", True)
+            # top_window.after(100, lambda: top_window.attributes("-topmost", False))
             
         button_frame = Frame(name_popup)
         button_frame.pack(pady=5)

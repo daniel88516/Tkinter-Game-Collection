@@ -11,7 +11,7 @@ rd /s /q dist
 
 echo 開始打包...
 
-set SQLITE_PYD=C:/Users/danie/AppData/Local/Programs/Python/Python312/DLLs/_sqlite3.pyd
+set SQLITE_PYD=D:\Users\lenovo\anaconda3\envs\GUI\DLLs\_sqlite3.pyd
 
 pyinstaller ^
   --onefile ^

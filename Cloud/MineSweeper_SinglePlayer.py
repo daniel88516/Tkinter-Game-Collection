@@ -17,7 +17,6 @@ def operation_check(method):
             return
         return method(self, *args, **kwargs)
     return wrapper
-
 class MineSweeper(Frame):
     """初始化"""
     def __init__(self, parent:Tk, difficulty: Difficulty=Difficulty.NORMAL):
@@ -39,7 +38,7 @@ class MineSweeper(Frame):
         self.window.mainloop()
         
     def load_images(self):
-        """把圖片加載진來, 之後可透過環境變數簡化"""
+        """把圖片加載進來, 之後可透過環境變數簡化"""
         base_path = os.path.join(os.path.dirname(__file__), f"Images/UI/32x32")
         self.tile_images = {}
         for i in range(1, 9):
@@ -73,15 +72,6 @@ class MineSweeper(Frame):
             "你的四肢在空中飛舞，劃出一道優美的血線",
             "轟!"
         ]
-    
-    def keep_window_on_top(self):
-        """確保視窗保持在最前面"""
-        self.window.deiconify()
-        self.window.lift()
-        self.window.focus_force()
-        self.window.attributes("-topmost", True)
-        # 短暫延遲後取消置頂，避免一直置頂影響其他程式
-        self.window.after(500, lambda: self.window.attributes("-topmost", False))
                 
     def create_gameboard(self):
         """創建遊戲版相關的所有元件"""
@@ -206,7 +196,7 @@ class MineSweeper(Frame):
         self.is_game_over = False
         self.first_click = True
         self.countup_timer.reset()
-        self.safe_reveal_btn.config(state=DISABLED)
+        self.safe_reveal_btn.config(image=self.tile_images["LightOn"],state=DISABLED)
         self.safe_reveal_var = True
         self.gameBoard.reset()
         self.update_board()
@@ -216,16 +206,11 @@ class MineSweeper(Frame):
         self.reveal_all_mines()
         self.is_game_over = True
         self.stop_timer()
-        
-        # 確保視窗在最前面，然後顯示訊息框
-        self.keep_window_on_top()
-        self.window.after(100, lambda: self.show_game_over_message())
-        
-    def show_game_over_message(self):
-        """顯示遊戲結束訊息"""
-        messagebox.showerror("遊戲結束", f"{self.get_random_final_message()}, 成功在{self.get_timer_value()}內失敗了!")
-        # 訊息框關閉後再次確保視窗在前面
-        self.keep_window_on_top()
+        top_window = self.winfo_toplevel()
+        messagebox.showerror("遊戲結束", f"{self.get_random_final_message()}, 成功在{self.get_timer_value()}內失敗了!", parent=self)
+        # top_window.lift()
+        # top_window.attributes("-topmost", True)
+        # top_window.after(100, lambda: top_window.attributes("-topmost", False))
         
     def check_win_condition(self):
         """勝利唾手可得"""
@@ -236,10 +221,8 @@ class MineSweeper(Frame):
                     return
         self.is_game_over = True
         self.stop_timer()
-        
-        # 確保視窗在最前面，然後顯示勝利訊息
-        self.keep_window_on_top()
-        self.window.after(100, lambda: self.show_victory_popup())
+        self.show_victory_popup()
+        # messagebox.showinfo("恭喜", f"你在{self.get_timer_value()}內贏得了遊戲！")
         
     """滑鼠事件處理"""
     @operation_check
@@ -402,43 +385,18 @@ class MineSweeper(Frame):
     def show_victory_popup(self):
         config = self.gameBoard.config
         
-        messagebox.showinfo("恭喜", f"你在 {self.get_timer_value()} 內贏得了遊戲！")
-        
-        # 訊息框關閉後再次確保視窗在前面
-        self.keep_window_on_top()
+        messagebox.showinfo("恭喜", f"你在 {self.get_timer_value()} 內贏得了遊戲！", parent=self)
+        # top_window = self.winfo_toplevel()
+        # top_window.lift()
+        # top_window.attributes("-topmost", True)
+        # top_window.after(100, lambda: top_window.attributes("-topmost", False))
         
         # 建立輸入名字的 Toplevel 視窗
-        name_popup = Toplevel(self.window)
+        name_popup = Toplevel()
         name_popup.title("輸入名字")
         name_popup.geometry("300x150")
         name_popup.resizable(False, False)
-        name_popup.grab_set()  # 模態視窗
-        name_popup.transient(self.window)  # 設定為主視窗的子視窗
-        
-        # 強制置頂並保持焦點
-        def ensure_popup_on_top():
-            name_popup.deiconify()
-            name_popup.lift()
-            name_popup.focus_force()
-            name_popup.attributes("-topmost", True)
-            # 延長置頂時間，確保用戶有足夠時間看到視窗
-            name_popup.after(2000, lambda: name_popup.attributes("-topmost", False))
-        
-        # 立即執行一次，然後定期檢查
-        ensure_popup_on_top()
-        
-        # 定期檢查視窗是否還在最前面（前3秒內每500ms檢查一次）
-        def periodic_check(count=0):
-            if count < 6 and name_popup.winfo_exists():  # 檢查6次，每次間隔500ms
-                try:
-                    if not name_popup.focus_get():  # 如果視窗失去焦點
-                        name_popup.lift()
-                        name_popup.focus_force()
-                    name_popup.after(500, lambda: periodic_check(count + 1))
-                except:
-                    pass  # 視窗可能已被關閉
-        
-        name_popup.after(500, lambda: periodic_check())
+        name_popup.grab_set()
 
         Label(name_popup, text="請輸入你的名字：", font=("微軟正黑體", 14)).pack(pady=10)
 
@@ -449,40 +407,34 @@ class MineSweeper(Frame):
         def on_confirm():
             name = entry.get().strip()
             if not name: 
-                messagebox.showerror("錯誤", "名字不能為空！")
+                messagebox.showerror("錯誤", "名字不能為空！", parent=self)
                 return
             minutes, seconds, millis = map(int, self.get_timer_value().replace(":", " ").replace(".", " ").split())
             db = Database()
             success = db.insert_score(name, minutes, seconds, millis, config)
             
             if success:
-                messagebox.showinfo("紀錄結果", f"🎉 {name} 的新紀錄已成功加入排行榜！")
+                messagebox.showinfo("紀錄結果", f"🎉 {name} 的新紀錄已成功加入排行榜！", parent=self)
             else:
-                messagebox.showinfo("紀錄結果", f"😅 {name} 的成績未超過舊有紀錄，未更新。")
+                messagebox.showinfo("紀錄結果", f"😅 {name} 的成績未超過舊有紀錄，未更新。", parent=self)
             
             db.close()
             name_popup.destroy()
-            # 確保主視窗回到前面
-            self.keep_window_on_top()
-            
-        def on_cancel():
-            name_popup.destroy()
-            self.keep_window_on_top()
+            # top_window = self.winfo_toplevel()
+            # top_window.lift()
+            # top_window.attributes("-topmost", True)
+            # top_window.after(100, lambda: top_window.attributes("-topmost", False))
             
         button_frame = Frame(name_popup)
         button_frame.pack(pady=5)
         confirm_btn = Button(button_frame, text="確定", font=("微軟正黑體", 12), command=on_confirm)
         confirm_btn.pack(side=LEFT)
         
-        cancel_btn = Button(button_frame, text="取消", font=("微軟正黑體", 12), command=on_cancel)
+        cancel_btn = Button(button_frame, text="取消", font=("微軟正黑體", 12), command=name_popup.destroy)
         cancel_btn.pack(padx=10, side=RIGHT)
 
-        # 綁定鍵盤事件
+        # 綁定 Enter 鍵
         name_popup.bind("<Return>", lambda event: on_confirm())
-        name_popup.bind("<Escape>", lambda event: on_cancel())
-        
-        # 處理視窗關閉事件
-        name_popup.protocol("WM_DELETE_WINDOW", on_cancel)
 
 if __name__ == "__main__":
     def on_tab_change(event):

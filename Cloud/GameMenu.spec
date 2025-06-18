@@ -4,7 +4,7 @@
 a = Analysis(
     ['GameMenu.py'],
     pathex=[],
-    binaries=[('C:/Users/danie/AppData/Local/Programs/Python/Python312/DLLs/_sqlite3.pyd', '.')],
+    binaries=[('D:\\Users\\lenovo\\anaconda3\\envs\\GUI\\DLLs\\_sqlite3.pyd', '.')],
     datas=[('.', '.')],
     hiddenimports=['sqlite3', 'requests', 'tkinter.simpledialog'],
     hookspath=[],

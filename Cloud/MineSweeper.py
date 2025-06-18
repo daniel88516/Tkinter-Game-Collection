@@ -1,13 +1,12 @@
 from tkinter import * 
 from tkinter import messagebox
 import os
+from MineSweeper_Difficulty import DifficultyConfig, Difficulty
 from MineSweeper_BoardManager import BoardManager
 from MineSweeper_NetworkManager import NetworkManager
 from MineSweeper_GameMessage import GameMessage, GameMessageType
 from MineSweeper_ChatManager import ChatManager
 from MineSweeper_Timer import CountDownTimer
-from MineSweeper_Difficulty import DifficultyConfig, Difficulty
-
 
 class MineSweeper:
     """主遊戲類"""
@@ -258,7 +257,10 @@ class MineSweeper:
         if remember_ready_state:
             self.player_board.is_ready = player_ready_state
             self.opponent_board.is_ready = opponent_ready_state
-                        
+        self.window.lift()
+        self.window.attributes("-topmost", True)
+        self.window.after(100, lambda: self.window.attributes("-topmost", False)) 
+
     def send_reset_message(self):
         """傳送重置的訊息"""
         # 不能放到 new_game 當中, 因為會彼此傳來傳去
@@ -403,6 +405,9 @@ class MineSweeper:
         )
         self.network_manager.send_game_message(message)
         messagebox.showinfo(title="遊戲結果", message=msg)
+        self.window.lift()
+        self.window.attributes("-topmost", True)
+        self.window.after(100, lambda: self.window.attributes("-topmost", False)) 
         if self.opponent_board.is_game_over:
             self.chat_manager.add_message(f"{self.player_board.get_timer_value()} vs {self.opponent_board.get_timer_value()}", from_self=True)
             self.new_game()
