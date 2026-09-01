@@ -1,27 +1,15 @@
 @echo off
-chcp 65001
+setlocal
+cd /d "%~dp0"
 
-:: 關閉 GameMenu.exe 避免鎖檔
-taskkill /f /im GameMenu.exe >nul 2>nul
-timeout /t 1 >nul
+powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass -File "%~dp0build_game.ps1"
+set "BUILD_EXIT_CODE=%ERRORLEVEL%"
 
-echo 清理打包環境...
-rd /s /q build
-rd /s /q dist
-
-echo 開始打包...
-
-set SQLITE_PYD=D:\Users\lenovo\anaconda3\envs\GUI\DLLs\_sqlite3.pyd
-
-pyinstaller ^
-  --onefile ^
-  --hidden-import=sqlite3 ^
-  --hidden-import=requests ^
-  --hidden-import=tkinter.simpledialog ^
-  --add-binary "%SQLITE_PYD%";. ^
-  --add-data ".";. ^
-  GameMenu.py
-
-echo ✅ 打包完成！
-start dist\GameMenu.exe
+echo.
+if "%BUILD_EXIT_CODE%"=="0" (
+  echo Build finished successfully.
+) else (
+  echo Build failed. Review the error message above.
+)
 pause
+exit /b %BUILD_EXIT_CODE%
